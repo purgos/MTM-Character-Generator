@@ -30,29 +30,6 @@ A Python-based character sheet application for the MTM (Magic: The Gathering) ta
 
 ## Installation and Setup
 
-### Option 1: Using Pre-built Executables (Recommended)
-
-#### Linux:
-The Linux executable is already built and ready to use:
-```bash
-./dist/MTM_Character_Sheet
-```
-
-#### Windows:
-1. **Transfer the project folder to a Windows machine**
-2. **Install Python 3.8+ from [python.org](https://python.org)**
-   - Make sure to check "Add Python to PATH" during installation
-3. **Run the build script:**
-   ```cmd
-   build_windows.bat
-   ```
-4. **Launch the application:**
-   ```cmd
-   run_windows.bat
-   ```
-
-### Option 2: Running from Source
-
 #### Linux:
 ```bash
 # Create virtual environment
@@ -115,17 +92,13 @@ python -m PyInstaller character_sheet_windows.spec
 mtm-character-sheet-python/
 ├── src/
 │   └── character_sheet.py          # Main application source
-├── dist/
-│   └── MTM_Character_Sheet         # Linux executable (built)
 ├── build_linux.sh                  # Linux build script
 ├── build_windows.bat               # Windows build script
 ├── run_character_sheet.sh          # Linux launcher
 ├── run_windows.bat                 # Windows launcher
 ├── character_sheet_linux.spec      # Linux PyInstaller config
 ├── character_sheet_windows.spec    # Windows PyInstaller config
-├── requirements.txt                # Python dependencies
-└── README.md                       # This file
-```
+└── requirements.txt                # Python dependencies
 
 ## Usage
 
