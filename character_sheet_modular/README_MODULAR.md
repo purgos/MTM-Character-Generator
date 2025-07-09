@@ -17,7 +17,6 @@ mtm-character-sheet-python/
 │   ├── character_sheet_modular.py # Main application
 │   └── MTM-Character-Generator-0.1.py # Original monolithic version
 ├── requirements.txt
-├── README.md
 └── README_MODULAR.md
 ```
 
