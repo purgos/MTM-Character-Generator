@@ -14,10 +14,7 @@ mtm-character-sheet-python/
 │   │   ├── gear_die_tab.py        # Gear die slots
 │   │   ├── inventory_tab.py       # Inventory management
 │   │   └── abilities_tab.py       # Special abilities
-│   ├── character_sheet_modular.py # Main application
-│   └── MTM-Character-Generator-0.1.py # Original monolithic version
-├── requirements.txt
-├── README.md
+│   └──character_sheet_modular.py # Main application
 └── README_MODULAR.md
 ```
 
