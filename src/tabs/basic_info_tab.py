@@ -146,8 +146,8 @@ class BasicInfoTab:
 
         # Initiative
         ttk.Label(combat_frame, text="Initiative:").grid(row=2, column=0, padx=5, pady=2)
-        self.initiative_entry = ttk.Entry(combat_frame)
-        self.initiative_entry.grid(row=2, column=1, padx=5, pady=2)
+        self.initiative_label = ttk.Label(combat_frame, text="+0")
+        self.initiative_label.grid(row=2, column=1, padx=5, pady=2)
 
         # Hero Points
         ttk.Label(combat_frame, text="Hero Points:").grid(row=3, column=0, padx=5, pady=2)
@@ -238,6 +238,9 @@ class BasicInfoTab:
 
         # Initialize roll history
         self.roll_history = []
+        
+        # Initialize initiative display
+        self.update_initiative_display()
 
     def calculate_max_hp(self):
         """Calculate max HP based on race and rank"""
@@ -309,12 +312,14 @@ class BasicInfoTab:
             self.type_callback(self.type_var.get())
 
     def on_unarmed_combat_change(self, *args):
-        """Handle unarmed combat change - update indoor speed"""
+        """Handle unarmed combat change - update indoor speed and initiative"""
         self.calculate_indoor_speed()
+        self.update_initiative_display()
 
     def on_rank_change_for_speed(self, *args):
-        """Handle rank change - update indoor speed"""
+        """Handle rank change - update indoor speed and initiative"""
         self.calculate_indoor_speed()
+        self.update_initiative_display()
 
     def roll_dice(self, die_type):
         """Roll a specific die type"""
@@ -404,7 +409,7 @@ class BasicInfoTab:
                 'hp': int(self.hp_entry.get() or 0),
                 'maxHp': int(self.max_hp_entry.get() or 0),
                 'indoorSpeed': indoor_speed,
-                'initiative': int(self.initiative_entry.get() or 0),
+                'initiative': self.calculate_initiative(),
                 'heroPoints': int(self.hero_points_entry.get() or 0)
             },
             'resources': {
@@ -450,8 +455,8 @@ class BasicInfoTab:
         self.max_hp_entry.delete(0, tk.END)
         self.max_hp_entry.insert(0, str(combat_stats.get('maxHp', 0)))
         
-        self.initiative_entry.delete(0, tk.END)
-        self.initiative_entry.insert(0, str(combat_stats.get('initiative', 0)))
+        # Initiative is calculated automatically, so we just update the display
+        self.update_initiative_display()
         
         self.hero_points_entry.delete(0, tk.END)
         self.hero_points_entry.insert(0, str(combat_stats.get('heroPoints', 0)))
@@ -501,7 +506,34 @@ class BasicInfoTab:
         # Update the label text directly
         self.indoor_speed_label.config(text=f"{speed} feet")
         
-        # Update outside speed as well
+        # Update outside speed as well (2 * indoor speed)
         self.outside_speed_label.config(text=f"{speed * 2} feet")
+    
+    def calculate_initiative(self):
+        """Calculate initiative based on unarmed combat and rank"""
+        current_rank = int(self.rank_var.get())
+        unarmed_combat = self.unarmed_combat_var.get()
+        
+        # Initiative is +0 by default
+        initiative = 0
+        
+        # If unarmed combat is selected, add +1 for every odd level attained
+        if unarmed_combat:
+            # Count odd levels from 1 to current rank
+            for level in range(1, current_rank + 1):
+                if level % 2 == 1:  # Odd level
+                    initiative += 1
+        
+        return initiative
+    
+    def update_initiative_display(self):
+        """Update the initiative display"""
+        initiative = self.calculate_initiative()
+        self.initiative_label.config(text=f"+{initiative}")
+        
+        # Also update character data
+        self.character_data['combatStats']['initiative'] = initiative
+        
+        print(f"[DEBUG] Initiative calculated: rank={int(self.rank_var.get())}, unarmed={self.unarmed_combat_var.get()}, initiative={initiative}")
 
  

@@ -23,10 +23,15 @@ class AspectsTab:
         self.get_rank = get_rank_callback
         self.rank_last_checked = self.get_rank()
         self.locked = False
+        self.abilities_callback = None
         
         self.create_tab()
         self.create_widgets()
         self.update_lock_state()  # Initial lock state
+    
+    def set_abilities_callback(self, callback):
+        """Set callback to update abilities dropdown when D12 aspect changes"""
+        self.abilities_callback = callback
         
     def create_tab(self):
         """Create the aspects tab"""
@@ -104,12 +109,29 @@ class AspectsTab:
 
         # Test button functionality
         self.test_button_functionality()
+        
+        # Initialize aspect values from character data
+        self.initialize_from_character_data()
 
     def create_widgets(self):
         """Create widgets for the aspects tab."""
         # This method is called from __init__ to set up the widgets.
         # The lock button creation is removed as per the edit hint.
         pass # No specific widgets to create here, as the tab is a frame.
+
+    def initialize_from_character_data(self):
+        """Initialize aspect values from character data"""
+        print("[DEBUG] Initializing aspects from character data...")
+        for aspect in ['melee', 'ranged', 'rogue', 'magic']:
+            if aspect in self.character_data['aspects']:
+                value = self.character_data['aspects'][aspect]
+                print(f"[DEBUG] Setting {aspect} to {value}")
+                if value != 'NULL':
+                    self.aspect_vars[aspect].set(value)
+                    self.update_modifier_display(aspect)
+                else:
+                    # Handle NULL values by showing disabled state
+                    self.set_aspect_value(aspect, 'NULL')
 
     def on_rank_change(self):
         """Called when rank changes. Lock fields if rank > 1."""
@@ -223,6 +245,22 @@ class AspectsTab:
         
         # Update character data
         self.character_data['aspects'][aspect] = current_die
+        
+        # Track D12 at level 1
+        current_rank = self.get_rank()
+        if current_rank == 1 and current_die == 'd12':
+            # Only set this if it hasn't been set yet, or replace if not locked
+            if (self.character_data.get('levelOneD12Aspect') is None or 
+                not self.choices_locked):
+                self.character_data['levelOneD12Aspect'] = aspect
+                print(f"[DEBUG] Level 1 D12 aspect set to: {aspect}")
+                
+                # Update abilities dropdown via callback
+                if self.abilities_callback:
+                    self.abilities_callback()
+                    print(f"[DEBUG] Updated abilities dropdown for aspect: {aspect}")
+        # Note: We no longer clear the D12 aspect when it loses D12 status
+        # It will only be replaced if a different aspect reaches D12 before locking
         
         # Update selected dice tracking
         if not self.choices_locked:
@@ -459,6 +497,24 @@ class AspectsTab:
                 # Update modifier display
                 self.update_modifier_display(aspect)
                 
+                # Update character data
+                self.character_data['aspects'][aspect] = new_die
+                
+                # Track D12 at level 1 (even in locked state)
+                current_rank = self.get_rank()
+                if current_rank == 1 and new_die == 'd12':
+                    # Only set this if it hasn't been set yet
+                    if self.character_data.get('levelOneD12Aspect') is None:
+                        self.character_data['levelOneD12Aspect'] = aspect
+                        print(f"[DEBUG] Level 1 D12 aspect set to: {aspect} (locked state)")
+                        
+                        # Update abilities dropdown via callback
+                        if self.abilities_callback:
+                            self.abilities_callback()
+                            print(f"[DEBUG] Updated abilities dropdown for aspect: {aspect} (locked state)")
+                # Note: We no longer clear the D12 aspect when it loses D12 status in locked state
+                # The original D12 aspect at level 1 is preserved
+                
                 # Update lock state
                 self.update_lock_state()
                 
@@ -501,7 +557,8 @@ class AspectsTab:
             'aspects': self.character_data['aspects'],
             'choices_locked': self.choices_locked,
             'lockedAspects': self.locked_aspects,
-            'aspectDieIncreases': self.aspect_die_increases
+            'aspectDieIncreases': self.aspect_die_increases,
+            'levelOneD12Aspect': self.character_data.get('levelOneD12Aspect')
         }
 
     def set_data(self, data):
@@ -528,6 +585,12 @@ class AspectsTab:
         
         # Handle locked aspects
         self.locked_aspects = data.get('lockedAspects', {})
+        
+        # Handle level 1 D12 aspect tracking
+        level_one_d12_aspect = data.get('levelOneD12Aspect')
+        if level_one_d12_aspect is not None:
+            self.character_data['levelOneD12Aspect'] = level_one_d12_aspect
+            print(f"[DEBUG] Loaded level 1 D12 aspect: {level_one_d12_aspect}")
         
         self.update_aspect_die_increases_display()
         

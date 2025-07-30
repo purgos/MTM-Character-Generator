@@ -43,7 +43,39 @@ class GearDieTab:
                                wraplength=400)
         instructions.pack(side='left', padx=5)
 
-        # Create a frame for each die type
+        # Create Free Slot - D4 section first
+        free_slot_frame = ttk.Frame(frame)
+        free_slot_frame.pack(fill='x', padx=5, pady=2)
+
+        # Free Slot label
+        ttk.Label(free_slot_frame, text="Free Slot - D4:").pack(pady=2)
+
+        # Create text entry for free slot
+        free_slots_frame = ttk.Frame(free_slot_frame)
+        free_slots_frame.pack(fill='x', padx=5)
+        
+        # Clear existing free slot entries
+        if 'free_d4' in self.gear_die_entries:
+            for entry in self.gear_die_entries['free_d4']:
+                entry.destroy()
+        self.gear_die_entries['free_d4'] = []
+        
+        # Create free slot entry
+        entry_frame = ttk.Frame(free_slots_frame)
+        entry_frame.pack(fill='x', pady=2)
+        entry = ttk.Entry(entry_frame, width=30)
+        entry.pack(side='left', padx=2, fill='x', expand=True)
+        self.gear_die_entries['free_d4'].append(entry)
+        
+        # Initialize the free slot entry in character data
+        if 'gearDieEntries' not in self.character_data:
+            self.character_data['gearDieEntries'] = {'free_d4': [], 'd4': [], 'd6': [], 'd8': [], 'd10': [], 'd12': []}
+        if len(self.character_data['gearDieEntries'].get('free_d4', [])) == 0:
+            self.character_data['gearDieEntries']['free_d4'] = ['']
+        else:
+            entry.insert(0, self.character_data['gearDieEntries']['free_d4'][0])
+
+        # Create a frame for each die type (excluding d4 since we handle it separately)
         for die in ['d4', 'd6', 'd8', 'd10', 'd12']:
             die_frame = ttk.Frame(frame)
             die_frame.pack(fill='x', padx=5, pady=2)
@@ -61,20 +93,36 @@ class GearDieTab:
                     entry.destroy()
             self.gear_die_entries[die] = []
             
-            # Create initial entries based on available slots
-            for i in range(int(self.gear_die_slots[die].get())):
-                entry_frame = ttk.Frame(slots_frame)
-                entry_frame.pack(fill='x', pady=2)
-                entry = ttk.Entry(entry_frame, width=30)
-                entry.pack(side='left', padx=2, fill='x', expand=True)
-                self.gear_die_entries[die].append(entry)
-                # Initialize the entry in character data
-                if 'gearDieEntries' not in self.character_data:
-                    self.character_data['gearDieEntries'] = {die: [] for die in ['d4', 'd6', 'd8', 'd10', 'd12']}
-                if i >= len(self.character_data['gearDieEntries'][die]):
-                    self.character_data['gearDieEntries'][die].append('')
-                else:
-                    entry.insert(0, self.character_data['gearDieEntries'][die][i])
+            # For d4, we need to handle it differently since we already have the free slot
+            if die == 'd4':
+                # Create entries for regular d4 slots (excluding the free slot)
+                num_regular_d4_slots = max(0, int(self.gear_die_slots[die].get()) - 1)
+                for i in range(num_regular_d4_slots):
+                    entry_frame = ttk.Frame(slots_frame)
+                    entry_frame.pack(fill='x', pady=2)
+                    entry = ttk.Entry(entry_frame, width=30)
+                    entry.pack(side='left', padx=2, fill='x', expand=True)
+                    self.gear_die_entries[die].append(entry)
+                    # Initialize the entry in character data
+                    if i >= len(self.character_data['gearDieEntries'].get(die, [])):
+                        self.character_data['gearDieEntries'][die].append('')
+                    else:
+                        entry.insert(0, self.character_data['gearDieEntries'][die][i])
+            else:
+                # Create initial entries based on available slots for other die types
+                for i in range(int(self.gear_die_slots[die].get())):
+                    entry_frame = ttk.Frame(slots_frame)
+                    entry_frame.pack(fill='x', pady=2)
+                    entry = ttk.Entry(entry_frame, width=30)
+                    entry.pack(side='left', padx=2, fill='x', expand=True)
+                    self.gear_die_entries[die].append(entry)
+                    # Initialize the entry in character data
+                    if 'gearDieEntries' not in self.character_data:
+                        self.character_data['gearDieEntries'] = {die: [] for die in ['free_d4', 'd4', 'd6', 'd8', 'd10', 'd12']}
+                    if i >= len(self.character_data['gearDieEntries'].get(die, [])):
+                        self.character_data['gearDieEntries'][die].append('')
+                    else:
+                        entry.insert(0, self.character_data['gearDieEntries'][die][i])
 
     def update_slots_for_rank(self, rank):
         """Update gear die slots based on character rank"""
@@ -110,6 +158,14 @@ class GearDieTab:
     def get_data(self):
         """Get gear die data"""
         gear_die_entries = {}
+        
+        # Handle free_d4 slot
+        if 'free_d4' in self.gear_die_entries:
+            gear_die_entries['free_d4'] = [entry.get() for entry in self.gear_die_entries['free_d4']]
+        else:
+            gear_die_entries['free_d4'] = []
+        
+        # Handle other die types
         for die in ['d4', 'd6', 'd8', 'd10', 'd12']:
             if die in self.gear_die_entries:
                 gear_die_entries[die] = [entry.get() for entry in self.gear_die_entries[die]]
@@ -132,6 +188,11 @@ class GearDieTab:
         
         # Set gear die entries from data
         gear_die_entries = data.get('gearDieEntries', {})
+        
+        # Ensure free_d4 is included in the gear die entries
+        if 'free_d4' not in gear_die_entries:
+            gear_die_entries['free_d4'] = ['']
+        
         self.character_data['gearDieEntries'] = gear_die_entries
         
         # Recreate the tab to show the data

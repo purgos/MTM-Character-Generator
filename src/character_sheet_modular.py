@@ -39,8 +39,10 @@ class CharacterSheetGUI:
             },
             'aspectIncreases': {
                 'allowed': 0,
+                'used': 0,
                 'history': {}
             },
+            'levelOneD12Aspect': None,  # Track which aspect had D12 at level 1
             'gearDieSlots': {
                 'd4': 2,
                 'd6': 1,
@@ -75,9 +77,14 @@ class CharacterSheetGUI:
             },
             'specialAbilities': {
                 'rank1': '',
+                'rank2': '',
+                'rank3': '',
                 'rank4': '',
-                'rank8': ''
-            }
+                'rank6': '',
+                'rank8': '',
+                'rank10': ''
+            },
+            'selectedAbilities': []
         }
         
         self.create_menu_bar()
@@ -94,6 +101,8 @@ class CharacterSheetGUI:
         file_menu.add_command(label="Save Character", command=self.save_character)
         file_menu.add_command(label="Load Character", command=self.load_character)
         file_menu.add_command(label="Reset Character", command=self.reset_character)
+        file_menu.add_separator()
+        file_menu.add_command(label="Lock Character", command=self.lock_character)
         file_menu.add_separator()
         file_menu.add_command(label="Print Character", command=self.print_character)
         file_menu.add_separator()
@@ -115,6 +124,9 @@ class CharacterSheetGUI:
         self.gear_die_tab = GearDieTab(self.notebook, self.character_data)
         self.inventory_tab = InventoryTab(self.notebook, self.character_data)
         self.abilities_tab = AbilitiesTab(self.notebook, self.character_data)
+        
+        # Set up callback to update abilities dropdown when D12 aspect changes
+        self.aspects_tab.set_abilities_callback(self.abilities_tab.update_ability_dropdown)
         
         # Add tabs to notebook
         self.notebook.add(self.basic_info_tab.tab, text="Basic Info")
@@ -150,20 +162,16 @@ class CharacterSheetGUI:
             # Ensure aspects tab locking logic is triggered
             self.aspects_tab.on_rank_change()
             
-            # Lock fields if any points have been added (total_points > 0)
-            if total_points > 0:
-                print(f"Locking fields - first rank point added")
-                self.basic_info_tab.lock_fields()
-                self.aspects_tab.locked = True
-                self.aspects_tab.update_lock_state()
-            else:
-                print(f"Not locking - no points added yet")
+            # Note: Automatic locking on level up has been removed
+            # Users must manually lock character using the Character menu
+            print(f"Rank updated to {new_rank} - no automatic locking")
             
             # Update gear die slots
             self.gear_die_tab.update_slots_for_rank(new_rank)
             
-            # Update abilities visibility
+            # Update abilities visibility and availability
             self.abilities_tab.update_ability_visibility()
+            self.abilities_tab.update_ability_availability()
             
             # Update aspect die increases for the new rank
             self.update_aspect_die_increases()
@@ -185,13 +193,49 @@ class CharacterSheetGUI:
         unarmed_combat = self.basic_info_tab.unarmed_combat_var.get()
         self.character_data['unarmedCombat'] = unarmed_combat
         
-        # Update aspects tab
-        self.aspects_tab.update_unarmed_combat_effects(unarmed_combat)
+        # Check if Specialized Warrior Melee is selected and handle the combination
+        current_type = self.character_data.get('type', 'Non-Specialized')
+        if current_type == 'Specialized Warrior Melee':
+            if unarmed_combat:
+                print(f"[DEBUG] Unarmed combat enabled with Specialized Warrior Melee - setting both magic and ranged to NULL")
+                # Set both magic and ranged aspects to NULL and lock them
+                self.character_data['aspects']['magic'] = 'NULL'
+                self.character_data['aspects']['ranged'] = 'NULL'
+                
+                self.aspects_tab.set_aspect_value('magic', 'NULL')
+                self.aspects_tab.set_aspect_value('ranged', 'NULL')
+                
+                self.aspects_tab.lock_aspect('magic')
+                self.aspects_tab.lock_aspect('ranged')
+            else:
+                print(f"[DEBUG] Unarmed combat disabled with Specialized Warrior Melee - keeping only magic as NULL")
+                # Only magic should be NULL for Specialized Warrior Melee without unarmed combat
+                self.character_data['aspects']['magic'] = 'NULL'
+                self.character_data['aspects']['ranged'] = 'd4'  # Reset ranged to default
+                
+                self.aspects_tab.set_aspect_value('magic', 'NULL')
+                self.aspects_tab.set_aspect_value('ranged', 'd4')
+                
+                self.aspects_tab.lock_aspect('magic')
+                self.aspects_tab.unlock_aspect('ranged')
+        
+        # For non-Specialized Warrior Melee characters, use the standard unarmed combat effects
+        if current_type != 'Specialized Warrior Melee':
+            self.aspects_tab.update_unarmed_combat_effects(unarmed_combat)
 
     def on_type_update(self, *args):
         """Handle type/specialization changes"""
         new_type = self.basic_info_tab.type_var.get()
         print(f"[DEBUG] on_type_update called with new_type: {new_type}")
+        
+        # Check if specialization is locked (rank >= 2)
+        current_rank = self.character_data.get('rank', 1)
+        if current_rank >= 2:
+            print(f"[DEBUG] Specialization locked at rank {current_rank}, preventing change")
+            # Revert the change by setting it back to the previous value
+            self.basic_info_tab.type_var.set(self.character_data['type'])
+            return
+        
         self.character_data['type'] = new_type
         
         # First revert any existing locks and NULL values from previous specializations
@@ -221,19 +265,18 @@ class CharacterSheetGUI:
         elif new_type == 'Shield Master':
             print(f"[DEBUG] Calling handle_shield_master_selection")
             self.handle_shield_master_selection()
+        
+        # Update abilities visibility and availability based on new type
+        self.abilities_tab.update_ability_visibility()
+        self.abilities_tab.update_ability_availability()
 
     def revert_specialization_effects(self):
-        """Revert any NULL values and locks that were applied by specializations"""
-        # Reset all aspects to their original state (not NULL unless they were originally NULL)
-        # and unlock all aspects
+        """Reset all aspects to default values when changing specialization"""
+        # Reset all aspects to their default values (d4) when changing specialization
         for aspect in ['melee', 'ranged', 'rogue', 'magic']:
-            # Only reset to NULL if it was set to NULL by a specialization
-            # For now, we'll reset to NULL and let the user set them again
-            # This is a simple approach - in a more complex system you might track the original values
-            if self.character_data['aspects'].get(aspect) == 'NULL':
-                # Reset to NULL (default state)
-                self.character_data['aspects'][aspect] = 'NULL'
-                self.aspects_tab.set_aspect_value(aspect, 'NULL')
+            # Reset to default d4 value
+            self.character_data['aspects'][aspect] = 'd4'
+            self.aspects_tab.set_aspect_value(aspect, 'd4')
             
             # Unlock the aspect (re-enable combobox and buttons)
             self.aspects_tab.unlock_aspect(aspect)
@@ -280,8 +323,6 @@ class CharacterSheetGUI:
             self.aspects_tab.lock_aspect(chosen_aspect)
             
             dialog.destroy()
-            messagebox.showinfo("Choice Confirmed", 
-                              f"Warrior {chosen_aspect.capitalize()} aspect has been set to NULL and locked.")
         
         button_frame = ttk.Frame(dialog)
         button_frame.pack(pady=20)
@@ -293,20 +334,34 @@ class CharacterSheetGUI:
         """Handle Specialized Warrior Melee selection - set magic aspect to NULL and lock it"""
         from tkinter import messagebox
         
-        print(f"[DEBUG] Specialized Warrior Melee selected - setting magic to NULL")
+        print(f"[DEBUG] Specialized Warrior Melee selected")
         
-        # Set magic aspect to NULL and lock it
-        self.character_data['aspects']['magic'] = 'NULL'
-        print(f"[DEBUG] Character data magic aspect set to: {self.character_data['aspects']['magic']}")
+        # Check if unarmed combat is also selected
+        unarmed_combat = self.character_data.get('unarmedCombat', False)
         
-        self.aspects_tab.set_aspect_value('magic', 'NULL')
-        print(f"[DEBUG] Called set_aspect_value for magic")
-        
-        self.aspects_tab.lock_aspect('magic')
-        print(f"[DEBUG] Called lock_aspect for magic")
-        
-        messagebox.showinfo("Specialized Warrior Melee", 
-                          "Magic aspect has been set to NULL and locked for Specialized Warrior Melee.")
+        if unarmed_combat:
+            print(f"[DEBUG] Unarmed combat also selected - setting both magic and ranged to NULL")
+            
+            # Set both magic and ranged aspects to NULL and lock them
+            self.character_data['aspects']['magic'] = 'NULL'
+            self.character_data['aspects']['ranged'] = 'NULL'
+            
+            self.aspects_tab.set_aspect_value('magic', 'NULL')
+            self.aspects_tab.set_aspect_value('ranged', 'NULL')
+            
+            self.aspects_tab.lock_aspect('magic')
+            self.aspects_tab.lock_aspect('ranged')
+            
+            print(f"[DEBUG] Set magic and ranged to NULL and locked both")
+        else:
+            print(f"[DEBUG] Unarmed combat not selected - setting only magic to NULL")
+            
+            # Set only magic aspect to NULL and lock it
+            self.character_data['aspects']['magic'] = 'NULL'
+            self.aspects_tab.set_aspect_value('magic', 'NULL')
+            self.aspects_tab.lock_aspect('magic')
+            
+            print(f"[DEBUG] Set only magic to NULL and locked it")
 
     def handle_specialized_warrior_ranged_selection(self):
         """Handle Specialized Warrior Ranged selection - set magic aspect to NULL and lock it"""
@@ -323,9 +378,6 @@ class CharacterSheetGUI:
         
         self.aspects_tab.lock_aspect('magic')
         print(f"[DEBUG] Called lock_aspect for magic")
-        
-        messagebox.showinfo("Specialized Warrior Ranged", 
-                          "Magic aspect has been set to NULL and locked for Specialized Warrior Ranged.")
 
     def handle_specialized_rogue_selection(self):
         """Handle Specialized Rogue selection - set magic aspect to NULL and lock it"""
@@ -342,9 +394,6 @@ class CharacterSheetGUI:
         
         self.aspects_tab.lock_aspect('magic')
         print(f"[DEBUG] Called lock_aspect for magic")
-        
-        messagebox.showinfo("Specialized Rogue", 
-                          "Magic aspect has been set to NULL and locked for Specialized Rogue.")
 
     def handle_shield_master_selection(self):
         """Handle Shield Master selection - set ranged aspect to NULL and lock it"""
@@ -361,32 +410,38 @@ class CharacterSheetGUI:
         
         self.aspects_tab.lock_aspect('ranged')
         print(f"[DEBUG] Called lock_aspect for ranged")
-        
-        messagebox.showinfo("Shield Master", 
-                          "Ranged aspect has been set to NULL and locked for Shield Master.")
 
     def update_aspect_die_increases(self):
         """Update the aspect die increases available based on current rank"""
         current_rank = self.character_data.get('rank', 1)
         
-        # Calculate aspect die increases based on rank
+        # Calculate total aspect die increases based on rank
         # Aspect die increases happen every even rank (2, 4, 6, 8, 10, 12)
-        total_increases = 0
+        total_allowed = 0
         if current_rank >= 2:
-            total_increases += 1  # Rank 2
+            total_allowed += 1  # Rank 2
         if current_rank >= 4:
-            total_increases += 1  # Rank 4
+            total_allowed += 1  # Rank 4
         if current_rank >= 6:
-            total_increases += 1  # Rank 6
+            total_allowed += 1  # Rank 6
         if current_rank >= 8:
-            total_increases += 1  # Rank 8
+            total_allowed += 1  # Rank 8
         if current_rank >= 10:
-            total_increases += 1  # Rank 10
+            total_allowed += 1  # Rank 10
         if current_rank >= 12:
-            total_increases += 1  # Rank 12
+            total_allowed += 1  # Rank 12
+        
+        # Update the character data
+        self.character_data['aspectIncreases']['allowed'] = total_allowed
+        
+        # Calculate available increases (total allowed minus used)
+        used_increases = self.character_data['aspectIncreases'].get('used', 0)
+        available_increases = max(0, total_allowed - used_increases)
+        
+        print(f"[DEBUG] Aspect die increases: allowed={total_allowed}, used={used_increases}, available={available_increases}")
         
         # Update the aspects tab
-        self.aspects_tab.update_aspect_die_increases(total_increases)
+        self.aspects_tab.update_aspect_die_increases(available_increases)
 
     def save_character(self):
         """Save character data to JSON file"""
@@ -396,26 +451,38 @@ class CharacterSheetGUI:
         )
         if file_path:
             try:
-                # Collect data from all tabs
-                basic_data = self.basic_info_tab.get_data()
-                aspects_data = self.aspects_tab.get_data()
-                gear_die_data = self.gear_die_tab.get_data()
-                inventory_data = self.inventory_tab.get_data()
-                abilities_data = self.abilities_tab.get_data()
-                
-                # Combine all data
-                save_data = {
-                    **basic_data,
-                    **aspects_data,
-                    **gear_die_data,
-                    **inventory_data,
-                    **abilities_data
-                }
-                
-                # Save to file
-                with open(file_path, 'w') as f:
-                    json.dump(save_data, f, indent=4)
-                messagebox.showinfo("Success", "Character saved successfully!")
+                # Show warning about locking character
+                if messagebox.askyesno("Save Character", 
+                                     "Saving will lock the character to prevent further changes.\n\n"
+                                     "Are you sure you want to save and lock the character?"):
+                    
+                    # Lock the character before saving
+                    self.lock_character_silent()
+                    
+                    # Collect data from all tabs
+                    basic_data = self.basic_info_tab.get_data()
+                    aspects_data = self.aspects_tab.get_data()
+                    gear_die_data = self.gear_die_tab.get_data()
+                    inventory_data = self.inventory_tab.get_data()
+                    abilities_data = self.abilities_tab.get_data()
+                    
+                    # Add locked status to save data
+                    save_data = {
+                        **basic_data,
+                        **aspects_data,
+                        **gear_die_data,
+                        **inventory_data,
+                        **abilities_data,
+                        'characterLocked': True
+                    }
+                    
+                    # Save to file
+                    with open(file_path, 'w') as f:
+                        json.dump(save_data, f, indent=4)
+                    messagebox.showinfo("Success", "Character saved and locked successfully!")
+                else:
+                    # User cancelled the save
+                    pass
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save character: {str(e)}")
 
@@ -439,15 +506,59 @@ class CharacterSheetGUI:
                 self.inventory_tab.set_data(load_data)
                 self.abilities_tab.set_data(load_data)
                 
-                messagebox.showinfo("Success", "Character loaded successfully!")
+                # Check if character was locked when saved
+                character_locked = load_data.get('characterLocked', False)
+                
+                if character_locked:
+                    # Lock the character to match saved state
+                    self.lock_character_silent()
+                    messagebox.showinfo("Success", "Character loaded successfully!\n\nCharacter is locked as it was when saved.")
+                else:
+                    # Update specialization lock state based on loaded rank (for older saves)
+                    loaded_rank = load_data.get('rank', 1)
+                    if loaded_rank >= 2:
+                        self.basic_info_tab.lock_specialization()
+                    else:
+                        self.basic_info_tab.unlock_specialization()
+                    messagebox.showinfo("Success", "Character loaded successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load character: {str(e)}")
+
+    def lock_character_silent(self):
+        """Lock all lockable fields without showing confirmation dialogs"""
+        # Lock basic info fields
+        self.basic_info_tab.lock_fields()
+        
+        # Lock aspects
+        self.aspects_tab.locked = True
+        self.aspects_tab.choices_locked = True
+        self.aspects_tab.update_lock_state()
+        
+        # Lock specialization if rank is 1 or higher
+        current_rank = self.character_data.get('rank', 1)
+        if current_rank >= 1:
+            self.basic_info_tab.lock_specialization()
+        
+        print(f"[DEBUG] Character locked silently - rank={current_rank}")
+
+    def lock_character(self):
+        """Lock all lockable fields"""
+        if messagebox.askyesno("Lock Character", 
+                              "Are you sure you want to lock the character?\n\n"
+                              "This will lock all fields to prevent further changes."):
+            
+            self.lock_character_silent()
+            
+            messagebox.showinfo("Character Locked", 
+                              "Character has been locked successfully.\n\n"
+                              "All fields are now locked to prevent further changes.")
 
     def reset_character(self):
         """Reset character to default state"""
         if messagebox.askyesno("Reset Character", "Are you sure you want to reset the character sheet?"):
             # Unlock all fields first so they can be reset
             self.basic_info_tab.unlock_fields()
+            self.basic_info_tab.unlock_specialization()
             self.aspects_tab.locked = False
             self.aspects_tab.update_lock_state()
             
@@ -462,13 +573,14 @@ class CharacterSheetGUI:
                 'type': 'Non-Specialized',
                 'unarmedCombat': False,
                 'aspects': {
-                    'melee': 'NULL',
-                    'ranged': 'NULL',
-                    'rogue': 'NULL',
-                    'magic': 'NULL'
+                    'melee': 'd4',
+                    'ranged': 'd4',
+                    'rogue': 'd4',
+                    'magic': 'd4'
                 },
                 'aspectIncreases': {
                     'allowed': 0,
+                    'used': 0,
                     'history': {}
                 },
                 'lockedAspects': {},
@@ -507,9 +619,14 @@ class CharacterSheetGUI:
                 },
                 'specialAbilities': {
                     'rank1': '',
+                    'rank2': '',
+                    'rank3': '',
                     'rank4': '',
-                    'rank8': ''
-                }
+                    'rank6': '',
+                    'rank8': '',
+                    'rank10': ''
+                },
+                'selectedAbilities': []
             }
             
             # Reset all tabs
