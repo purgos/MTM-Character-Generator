@@ -3,10 +3,11 @@ from tkinter import ttk
 import random
 
 class BasicInfoTab:
-    def __init__(self, parent, character_data, type_callback=None):
+    def __init__(self, parent, character_data, type_callback=None, gear_die_tab=None):
         self.parent = parent
         self.character_data = character_data
         self.type_callback = type_callback
+        self.gear_die_tab = gear_die_tab
         self.tab = ttk.Frame(parent)
         self.create_tab()
         
@@ -243,7 +244,7 @@ class BasicInfoTab:
         self.update_initiative_display()
 
     def calculate_max_hp(self):
-        """Calculate max HP based on race and rank"""
+        """Calculate max HP based on race, rank, and gear die allocations"""
         base_hp = 20
         rank = int(self.rank_var.get())
         
@@ -264,7 +265,14 @@ class BasicInfoTab:
         race_modifier = race_hp_modifiers.get(self.race_var.get(), 0)
         rank_hp = rank * 5
         
+        # Calculate base max HP
         max_hp = base_hp + race_modifier + rank_hp
+        
+        # Add gear die hitpoints if gear die tab is available
+        if self.gear_die_tab:
+            gear_die_hp = self.gear_die_tab.calculate_gear_die_hitpoints()
+            max_hp += gear_die_hp
+        
         return max_hp
 
     def update_rank(self, *args):
@@ -275,9 +283,7 @@ class BasicInfoTab:
             self.rank_var.set(str(rank))
             
             # Update max HP
-            max_hp = self.calculate_max_hp()
-            self.max_hp_entry.delete(0, tk.END)
-            self.max_hp_entry.insert(0, str(max_hp))
+            self.update_max_hp_display()
             
             # Update current rank points (modulo 25)
             current_rank_points = total_points % 25
@@ -302,6 +308,10 @@ class BasicInfoTab:
 
     def on_race_change(self):
         """Handle race change - update max HP"""
+        self.update_max_hp_display()
+    
+    def update_max_hp_display(self):
+        """Update the max HP display with current calculation"""
         max_hp = self.calculate_max_hp()
         self.max_hp_entry.delete(0, tk.END)
         self.max_hp_entry.insert(0, str(max_hp))

@@ -861,6 +861,97 @@ SPELLS = {
         "duration": "Persistent",
         "frequency": "This spell can be cast once per encounter.",
         "description": "Allows the caster to take ½ of the allies' damage for a number of rounds equal to the gear die roll. A rank 7 or higher caster can elect to take all damage instead. The caster can also elect to not take the damage in any given round though not taking the damage does not extend the length of the spell."
+
+    "BURIED ALIVE": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I'],
+        "area_of_effect": "The Casters Line of Vision",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per day.",
+        "description": "This spell causes the affected area to fill with boulders causing its gear die in damage to any targets in the area of effect. The effect lasts a number of rounds equal to the gear die roll. Creatures can make a Magic save vs. DL11 or better to avoid being buried in the rubble. Huge or larger size creatures gain a +2 bonus to the magic save per size category above Large that they are. Buried creatures can take no actions though they may be dug out by others in 1d4 rounds. Buried creatures do not take ongoing damage, however, they are subject to the Drowning rules/effects while buried under the rubble. A rank 7 or better caster can fill a 20x20x20 area."
+    },
+
+    "EYE SEE YOU": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I', 'O', 'S'],
+        "area_of_effect": "The Casters Line of Vision",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per day.",
+        "description": "This spell allows the caster to conjure a magical eye that the caster can use to see through. The eye lasts a number of rounds equal to the gear die rolled. This magical eye has and confers Darkvision to the caster and allows the caster to cast spells through the eye as though they could actually see the target(s) with their own eyes. The Magic Eye has 15HP and is subject to attack and spells. The eye uses the casters statistics for Magic Saves and Armor Checks. The eye can be moved or maintained by the caster using a move action and can move 60' per round indoors or 120' per round outdoors. The caster must maintain visual contact with the Magic Eye or the effect ends immediately. A rank 7 or better caster can cast this spell once per encounter."
+    },
+
+    "GOTTA HAVE IT": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I'],
+        "area_of_effect": "The Caster",
+        "duration": "Instantaneous",
+        "frequency": "This spell can be cast once per encounter.",
+        "description": "This spell allows the caster to cast any spell in their spell book when needed without having to have it prepared in either a Spell or Gear Die slot beforehand. The spell gained from this spell is subject to any limitations of the gained spell. The spell can only be at a D4, D6, or D8 level of effect. A Rank 7 or better caster can cast any spell from their spell book when needed at any Spell or Gear Die level. A rank 7 or better caster can cast this spell once per encounter."
+    },
+
+    "I DARE YOU TO": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I', 'S'],
+        "area_of_effect": "A Single or Multiple Creatures",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per encounter.",
+        "description": "This spell causes iron spikes to erupt from the targets body or armor. These spikes cause damage to any creature of equal or smaller size to the target each time they attack the target with any non-reach or natural weapon(s). The effect lasts a number of rounds equal to the gear die rolled. The spikes cause 1d4 damage per attack that the attacking creature makes against the recipient of this spell. A rank 7 or better caster can cast this spell once per encounter."
+    },
+
+    "INVISIBILITY": {
+        "prerequisite": "Magic Aspect D12",
+        "spell_components": ['I', 'O', 'S'],
+        "material_component": "1 Vial of Medusa Blood",
+        "area_of_effect": "A Single or Multiple Willing Creatures",
+        "duration": "Persistent",
+        "frequency": "Can be cast once per encounter.",
+        "description": "Can be cast on one or several willing creatures, making it impossible for them to be seen by normal means, at the cost of 4 points rolled per creature with a minimum of one and a maximum of 3. Although attacking an enemy while invisible will always grant one automatic hit (two if the character dual wields), it will also immediately end the invisibility spell for that person. This spell does not grant any extra attacks or actions beyond the automatic hit with the first set of attacks. This spell lasts a number of rounds equal to the spell roll on each target."
+    },
+
+    "LUCK OF THE IRISH": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I', 'O', 'S'],
+        "area_of_effect": "The Caster",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per encounter.",
+        "description": "This spell allows the caster access to a pool of points that can be applied to any rolls the caster makes with the exception of Death saves equal to the gear die rolled. These points last a number of rounds equal to the gear die rolled. A rank 7 or better caster can choose to affect one ally instead."
+    },
+
+    "MORE IS ALWAYS BETTER": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I'],
+        "area_of_effect": "A Single or Multiple Creatures",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per encounter.",
+        "description": "This spell allows the caster to give the target an additional pair of arms. The effect lasts for a number of rounds equal to the gear die rolled. The target gets an extra attack action as a benefit. If the target does not have weapons available for each new arm, they can instead make an Improvised Weapon attack with those arms as though they had the Improvised Weapon ability. If the target already has the improvised weapon ability, the additional arm attacks would instead be at 1d6 damage. A rank 7 or better caster can cast this spell once per encounter."
+    },
+
+    "MUTABLE FORM": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I', 'O', 'S'],
+        "area_of_effect": "A Single or Multiple Creatures",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per day per target.",
+        "description": "This spell allows the recipient to assume a mutable form that makes the target immune from critical hits for a number of rounds equal to the gear die rolled. A rank 7 or better caster can cast this spell on one ally instead."
+    },
+
+    "PURIFY AREA": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I', 'O', 'S'],
+        "area_of_effect": "The Casters Line of Vision",
+        "duration": "Persistent",
+        "frequency": "This spell can be cast once per encounter.",
+        "description": "This spell removes any negative non-magical effects/objects in the area. All squares affected must be connected. A rank 7 or better caster can affect 2 five foot squares per rank. Line of sight is not required to cast this spell in your own square. This spell lasts a number of rounds equal to the gear die roll."
+    },
+
+    "WHAT THE HECK WAS THAT": {
+        "prerequisite": "Magic Aspect D8",
+        "spell_components": ['I', 'S'],
+        "area_of_effect": "A Single or Multiple Creatures",
+        "duration": "Instantaneous",
+        "frequency": "This spell can be cast once per encounter.",
+        "description": "This spell allows the recipient to make a single Warrior Melee attack against all creatures that the recipient can see equal to the gear die of the spell regardless of how far away the target(s) are. The recipient will make one Warrior Melee attack roll and apply that to all targets they are attempting to hit, so this spell is all or nothing. The recipient of this spell moves at blinding speed during the round this spell is in effect and ends their turn in the original square they started in after the effect ends. The effect must be used by the end of the recipients next turn after casting or it is simply lost. A rank 7 or better caster can affect two allies per casting."
+    },
     },
 
 }

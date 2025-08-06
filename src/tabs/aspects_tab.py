@@ -25,6 +25,9 @@ class AspectsTab:
         self.locked = False
         self.abilities_callback = None
         
+        # Flag to prevent callbacks during initialization
+        self.initializing = True
+        
         self.create_tab()
         self.create_widgets()
         self.update_lock_state()  # Initial lock state
@@ -72,7 +75,7 @@ class AspectsTab:
             
             ttk.Label(aspect_frame, text=aspect.capitalize() + ":", width=10).pack(side='left', padx=5)
             
-            self.aspect_vars[aspect] = tk.StringVar(value='d6')
+            self.aspect_vars[aspect] = tk.StringVar(value='d4')
             aspect_combo = ttk.Combobox(aspect_frame, textvariable=self.aspect_vars[aspect], state='readonly')
             aspect_combo['values'] = dice_values
             aspect_combo.pack(side='left', padx=5)
@@ -132,6 +135,10 @@ class AspectsTab:
                 else:
                     # Handle NULL values by showing disabled state
                     self.set_aspect_value(aspect, 'NULL')
+        
+        # Mark initialization as complete
+        self.initializing = False
+        print("[DEBUG] Initialization complete, callbacks enabled")
 
     def on_rank_change(self):
         """Called when rank changes. Lock fields if rank > 1."""
@@ -238,13 +245,20 @@ class AspectsTab:
 
     def on_aspect_change(self, aspect):
         """Handle aspect change"""
+        # Skip processing during initialization or option updates
+        if self.initializing or getattr(self, 'updating_options', False):
+            print(f"[DEBUG] Skipping on_aspect_change during initialization/option updates for {aspect}")
+            return
+            
         current_die = self.aspect_vars[aspect].get()
+        print(f"[DEBUG] on_aspect_change called: aspect={aspect}, current_die={current_die}")
         
         # Update modifier display
         self.update_modifier_display(aspect)
         
         # Update character data
         self.character_data['aspects'][aspect] = current_die
+        print(f"[DEBUG] Character data {aspect} updated to: {current_die}")
         
         # Track D12 at level 1
         current_rank = self.get_rank()
@@ -263,7 +277,7 @@ class AspectsTab:
         # It will only be replaced if a different aspect reaches D12 before locking
         
         # Update selected dice tracking
-        if not self.choices_locked:
+        if not self.choices_locked and not getattr(self, 'resetting_aspects', False):
             # Check if this die is already selected by another aspect
             conflicting_aspect = None
             for asp, die_value in self.aspect_vars.items():
@@ -327,6 +341,10 @@ class AspectsTab:
         # Update lock state to enable/disable buttons based on new die value
         if self.locked:
             self.update_lock_state()
+        
+        # Notify gear die tab of aspect changes
+        if hasattr(self, 'gear_die_callback') and self.gear_die_callback:
+            self.gear_die_callback()
 
     def update_aspect_die_increases_display(self):
         """Update the display of aspect die increases"""
@@ -395,7 +413,7 @@ class AspectsTab:
             return
             
         aspects = ['melee', 'ranged', 'rogue', 'magic']
-        dice_values = ['d6', 'd8', 'd10', 'd12']
+        dice_values = ['d6', 'd8', 'd10', 'd12']  # Maintain original order
         
         # Count how many aspects are NULL
         null_count = 0
@@ -403,15 +421,15 @@ class AspectsTab:
             if self.character_data['aspects'].get(aspect) == 'NULL':
                 null_count += 1
         
-        # Determine available dice based on NULL count
+        # Determine available dice based on NULL count, but maintain original order
         if null_count == 0:
             # No aspects are NULL - show all dice
             available_dice = ['d6', 'd8', 'd10', 'd12']
         elif null_count == 1:
-            # One aspect is NULL - show d8, d10, d12
+            # One aspect is NULL - show d8, d10, d12 (maintain order)
             available_dice = ['d8', 'd10', 'd12']
         else:
-            # Multiple aspects are NULL - show d10, d12
+            # Multiple aspects are NULL - show d10, d12 (maintain order)
             available_dice = ['d10', 'd12']
         
         # Update selected dice tracking first
@@ -432,7 +450,8 @@ class AspectsTab:
             
             # Before locking, allow all available dice for reassignment
             # This allows swapping dice between aspects
-            available_values = available_dice.copy()
+            # Filter the original dice_values to maintain order
+            available_values = [die for die in dice_values if die in available_dice]
             
             # Update combobox values
             combo['values'] = available_values
@@ -457,6 +476,9 @@ class AspectsTab:
     def adjust_die_value(self, aspect, change):
         """Adjust die value for an aspect"""
         print(f"[DEBUG] adjust_die_value called: aspect={aspect}, change={change}, choices_locked={self.choices_locked}, aspect_die_increases={self.aspect_die_increases}")
+        
+        # Update selected dice tracking to reflect current state
+        self.update_selected_dice_for_current_state()
         print(f"[DEBUG] selected_dice: {self.selected_dice}")
         
         # Full dice order including NULL and d4 for internal use
@@ -475,6 +497,11 @@ class AspectsTab:
                 # Prevent decreasing to NULL after locking
                 if change < 0 and new_die == 'NULL':
                     print(f"[DEBUG] Cannot decrease {aspect} to NULL after locking")
+                    return
+
+                # Prevent increasing NULL aspects with aspect die increases
+                if change > 0 and self.character_data['aspects'].get(aspect) == 'NULL':
+                    print(f"[DEBUG] Cannot increase {aspect} from NULL with aspect die increase")
                     return
 
                 # Only check for aspect die increase if the new value would be higher than the locked value
@@ -518,26 +545,46 @@ class AspectsTab:
                 # Update lock state
                 self.update_lock_state()
                 
+                # Notify gear die tab of aspect changes
+                if hasattr(self, 'gear_die_callback') and self.gear_die_callback:
+                    self.gear_die_callback()
+                
             except ValueError:
                 print(f"[DEBUG] Current die value '{current_die}' not found in dice_values")
         else:
-            # Unlocked state - only allow selection from dropdown values
-            dropdown_values = ['d6', 'd8', 'd10', 'd12']
+            # Unlocked state - handle all die values including NULL and d4
+            all_dice_values = ['NULL', 'd4', 'd6', 'd8', 'd10', 'd12']
             try:
-                current_index = dropdown_values.index(current_die)
-                new_index = max(0, min(len(dropdown_values) - 1, current_index + change))
-                new_die = dropdown_values[new_index]
+                current_index = all_dice_values.index(current_die)
+                new_index = max(0, min(len(all_dice_values) - 1, current_index + change))
+                new_die = all_dice_values[new_index]
                 
-                # Check if the new die is available
-                if new_die in ['NULL', 'd4'] or self.selected_dice[new_die] is None or self.selected_dice[new_die] == aspect:
+                # Prevent increasing NULL aspects
+                if change > 0 and self.character_data['aspects'].get(aspect) == 'NULL':
+                    print(f"[DEBUG] Cannot increase {aspect} from NULL")
+                    return
+                
+                # Check if this would be an aspect die increase (going from d4 to higher die)
+                if change > 0 and current_die == 'd4' and new_die in ['d6', 'd8', 'd10', 'd12']:
+                    print(f"[DEBUG] This would be an aspect die increase from {current_die} to {new_die}")
+                    if not self.use_aspect_die_increase():
+                        print(f"[DEBUG] No aspect die increases available")
+                        return
+                    print(f"[DEBUG] Used aspect die increase")
+                
+                # Allow the change if it's NULL, d4, or an available die
+                # For NULL and d4, always allow the change
+                # For other dice, only allow if not selected by another aspect OR if this aspect currently has that die
+                if new_die in ['NULL', 'd4'] or self.selected_dice.get(new_die) is None or self.selected_dice[new_die] == aspect:
+                    print(f"[DEBUG] Allowing change from {current_die} to {new_die}")
                     self.aspect_vars[aspect].set(new_die)
                     self.update_modifier_display(aspect)
                     self.on_aspect_change(aspect)
                 else:
-                    print(f"[DEBUG] Die {new_die} is already selected by {self.selected_dice[new_die]}")
+                    print(f"[DEBUG] Die {new_die} is already selected by {self.selected_dice.get(new_die)}")
                     
             except ValueError:
-                print(f"[DEBUG] Current die value '{current_die}' not found in dropdown_values")
+                print(f"[DEBUG] Current die value '{current_die}' not found in all_dice_values")
 
     def update_selected_dice_for_current_state(self):
         """Update selected dice tracking to reflect current aspect values"""
@@ -614,15 +661,29 @@ class AspectsTab:
             disabled_label = getattr(self, f'{aspect}_disabled_label')
             
             if value == 'NULL':
-                combo.pack_forget()
-                disabled_label.pack(side='left', padx=5)
-                self.modifier_vars[aspect].set("--")
+                # Instead of showing disabled label, show d4 but greyed out
+                disabled_label.pack_forget()
+                combo.pack(side='left', padx=5)
+                
+                # Temporarily disable callbacks to prevent conflicts
+                self.updating_options = True
+                self.aspect_vars[aspect].set('d4')
+                self.updating_options = False
+                
+                self.update_modifier_display(aspect)
+                combo.config(state='disabled')
+                print(f"[DEBUG] {aspect} set to d4 and greyed out (NULL)")
             else:
                 disabled_label.pack_forget()
                 combo.pack(side='left', padx=5)
                 self.aspect_vars[aspect].set(value)
                 self.update_modifier_display(aspect)
+                combo.config(state='readonly')
                 print(f"[DEBUG] {aspect} StringVar set to: {value}")
+            
+            # Notify gear die tab of aspect changes (for both NULL and non-NULL values)
+            if hasattr(self, 'gear_die_callback') and self.gear_die_callback:
+                self.gear_die_callback()
         else:
             print(f"[DEBUG] Aspect {aspect} not found in aspect_vars")
 

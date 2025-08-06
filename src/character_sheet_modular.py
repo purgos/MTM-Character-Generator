@@ -50,6 +50,8 @@ class CharacterSheetGUI:
                 'd10': 1,
                 'd12': 1
             },
+            'gearDieAllocations': {},
+            'freeSlotOption': 'none',
             'gearDieEntries': {
                 'd4': [],
                 'd6': [],
@@ -124,6 +126,15 @@ class CharacterSheetGUI:
         self.gear_die_tab = GearDieTab(self.notebook, self.character_data)
         self.inventory_tab = InventoryTab(self.notebook, self.character_data)
         self.abilities_tab = AbilitiesTab(self.notebook, self.character_data)
+        
+        # Set up gear die tab reference in basic info tab
+        self.basic_info_tab.gear_die_tab = self.gear_die_tab
+        
+        # Set up callback for gear die tab to notify basic info tab of max HP changes
+        self.gear_die_tab.max_hp_callback = self.basic_info_tab.update_max_hp_display
+        
+        # Set up callback for aspects tab to notify gear die tab of aspect changes
+        self.aspects_tab.gear_die_callback = self.gear_die_tab.on_aspects_change
         
         # Set up callback to update abilities dropdown when D12 aspect changes
         self.aspects_tab.set_abilities_callback(self.abilities_tab.update_ability_dropdown)
@@ -222,6 +233,9 @@ class CharacterSheetGUI:
         # For non-Specialized Warrior Melee characters, use the standard unarmed combat effects
         if current_type != 'Specialized Warrior Melee':
             self.aspects_tab.update_unarmed_combat_effects(unarmed_combat)
+        
+        # Update gear die allocation options based on unarmed combat status
+        self.gear_die_tab.on_unarmed_combat_change(unarmed_combat)
 
     def on_type_update(self, *args):
         """Handle type/specialization changes"""
@@ -272,14 +286,28 @@ class CharacterSheetGUI:
 
     def revert_specialization_effects(self):
         """Reset all aspects to default values when changing specialization"""
+        print("[DEBUG] Reverting specialization effects - resetting all aspects to default d4")
+        
+        # Set a flag to prevent conflict resolution during reset
+        self.aspects_tab.resetting_aspects = True
+        
         # Reset all aspects to their default values (d4) when changing specialization
         for aspect in ['melee', 'ranged', 'rogue', 'magic']:
+            print(f"[DEBUG] Resetting {aspect} to d4")
+            
             # Reset to default d4 value
             self.character_data['aspects'][aspect] = 'd4'
             self.aspects_tab.set_aspect_value(aspect, 'd4')
             
             # Unlock the aspect (re-enable combobox and buttons)
             self.aspects_tab.unlock_aspect(aspect)
+            
+            print(f"[DEBUG] {aspect} reset to d4 and unlocked")
+        
+        # Clear the reset flag
+        self.aspects_tab.resetting_aspects = False
+        
+        print("[DEBUG] All aspects reset to default values")
 
     def handle_specialized_caster_selection(self):
         """Show popup for Specialized Caster to choose which warrior aspect to lose"""
@@ -534,10 +562,14 @@ class CharacterSheetGUI:
         self.aspects_tab.choices_locked = True
         self.aspects_tab.update_lock_state()
         
+        # Lock gear die choices (only hitpoints, dodge, parry)
+        self.gear_die_tab.lock_gear_die_choices()
+        
         # Lock specialization if rank is 1 or higher
         current_rank = self.character_data.get('rank', 1)
         if current_rank >= 1:
-            self.basic_info_tab.lock_specialization()
+            # Specialization locking is handled by the basic info tab's lock_fields method
+            pass
         
         print(f"[DEBUG] Character locked silently - rank={current_rank}")
 
@@ -558,9 +590,9 @@ class CharacterSheetGUI:
         if messagebox.askyesno("Reset Character", "Are you sure you want to reset the character sheet?"):
             # Unlock all fields first so they can be reset
             self.basic_info_tab.unlock_fields()
-            self.basic_info_tab.unlock_specialization()
             self.aspects_tab.locked = False
             self.aspects_tab.update_lock_state()
+            self.gear_die_tab.unlock_gear_die_choices()
             
             # Reset character data
             self.character_data = {
@@ -592,6 +624,8 @@ class CharacterSheetGUI:
                     'd10': 1,
                     'd12': 1
                 },
+                'gearDieAllocations': {},
+                'freeSlotOption': 'none',
                 'gearDieEntries': {
                     'd4': [],
                     'd6': [],
