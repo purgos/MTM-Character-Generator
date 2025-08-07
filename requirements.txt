@@ -1,17 +1,9 @@
-# Example requirements for MTM Character Generator
-# Add or remove packages as needed for your project
+# Project dependencies for MTM Character Generator
 
-# Core Python (no external dependencies required for basic functionality)
-
+reportlab>=4.0.0
 tkinter
 
-# If you use pandas for data manipulation (uncomment if needed)
+# Add optional packages below if later used:
 # pandas
-
-# If you use numpy for numerical operations (uncomment if needed)
 # numpy
-
-# If you use Pillow for image handling (uncomment if needed)
 # Pillow
-
-# If you use any other packages, add them below

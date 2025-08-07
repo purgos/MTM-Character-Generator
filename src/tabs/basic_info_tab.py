@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk
-import random
 import re
 # Robust import for MAGIC_ITEMS to support running this file directly or via package
 try:
