@@ -1,16 +1,87 @@
 import tkinter as tk
 from tkinter import ttk
 import random
+import re
+# Robust import for MAGIC_ITEMS to support running this file directly or via package
+try:
+    from magic_items import MAGIC_ITEMS  # when src/ is on sys.path
+except ModuleNotFoundError:
+    try:
+        from ..magic_items import MAGIC_ITEMS  # when using package relative import
+    except Exception:
+        import os, sys as _sys
+        _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if _base_dir not in _sys.path:
+            _sys.path.insert(0, _base_dir)
+        from magic_items import MAGIC_ITEMS
 
 class BasicInfoTab:
+    CUSTOM_ITEM_LABEL = 'Custom Item...'
     def __init__(self, parent, character_data, type_callback=None, gear_die_tab=None):
         self.parent = parent
         self.character_data = character_data
         self.type_callback = type_callback
         self.gear_die_tab = gear_die_tab
         self.tab = ttk.Frame(parent)
+        # Provide instance attribute for MAGIC_ITEMS
+        self.MAGIC_ITEMS = MAGIC_ITEMS
         self.create_tab()
         
+    def on_magic_item_selected(self, event=None):
+        # Sync from listbox selection if event originated there
+        if event and hasattr(event, 'widget') and event.widget is getattr(self, 'magic_items_listbox', None):
+            sel = self.magic_items_listbox.curselection()
+            if sel:
+                idx = sel[0]
+                if 0 <= idx < len(self.selected_magic_items):
+                    self.magic_item_var.set(self.selected_magic_items[idx]['name'])
+        item_name = self.magic_item_var.get() if hasattr(self, 'magic_item_var') else ''
+        if not item_name:
+            if hasattr(self, 'update_use_charge_state'):
+                self.update_use_charge_state()
+            return
+        if item_name == self.CUSTOM_ITEM_LABEL:
+            if hasattr(self, 'open_custom_item_dialog'):
+                self.open_custom_item_dialog()
+            return
+        item_data = self.magic_item_lookup.get(item_name, {}) if hasattr(self, 'magic_item_lookup') else {}
+        # Variants handling
+        if hasattr(self, 'variant_combo') and hasattr(self, 'variant_var'):
+            if 'variants' in item_data:
+                self.variant_combo['values'] = item_data['variants']
+                current_variant = self.variant_var.get()
+                if current_variant not in item_data['variants']:
+                    self.variant_combo.set(item_data['variants'][0])
+            else:
+                self.variant_combo['values'] = []
+                self.variant_combo.set('')
+        # Charges default
+        if hasattr(self, 'charges_var'):
+            if 'charges' in item_data:
+                self.charges_var.set(str(item_data['charges']))
+            else:
+                self.charges_var.set('')
+        if hasattr(self, 'update_magic_item_description'):
+            self.update_magic_item_description(item_data)
+        if hasattr(self, 'update_use_charge_state'):
+            self.update_use_charge_state()
+
+    def sanitize_item_name(self, name: str) -> str:
+        if not name:
+            return name
+        # Remove common apostrophe-like characters
+        name = re.sub(r"[\u2018\u2019\u02BC\u2032`']", "", name)
+        # Collapse multiple whitespace into single spaces
+        name = re.sub(r"\s+", " ", name).strip()
+        return name
+
+    def sanitize_text(self, text: str) -> str:
+        if not text:
+            return text
+        text = re.sub(r"[\u2018\u2019\u02BC\u2032`']", "", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
     def create_tab(self):
         """Create the basic info tab with character information and dice roller"""
         # Main container frame
@@ -109,17 +180,71 @@ class BasicInfoTab:
         add_button = ttk.Button(add_points_frame, text="Add", command=self.add_rank_points)
         add_button.pack(side='left', padx=5)
 
-        # Magic Items Frame
-        magic_items_frame = ttk.LabelFrame(frame, text="Magic Items")
-        magic_items_frame.grid(row=6, column=0, columnspan=2, padx=5, pady=5, sticky='ew')
-        
-        # Create 7 magic item entries
-        self.magic_item_entries = []
-        for i in range(7):
-            ttk.Label(magic_items_frame, text=f"Magic Item {i+1}:").grid(row=i, column=0, padx=5, pady=2)
-            entry = ttk.Entry(magic_items_frame, width=60)  # Increased width from default to 60
-            entry.grid(row=i, column=1, padx=5, pady=2, sticky='ew')
-            self.magic_item_entries.append(entry)
+        # Magic Items + Description Bottom Frame
+        bottom_frame = ttk.Frame(self.tab)
+        bottom_frame.pack(side='bottom', fill='x', padx=5, pady=5)
+
+        # Magic Items Frame now on the left
+        magic_items_frame = ttk.LabelFrame(bottom_frame, text="Magic Items")
+        magic_items_frame.pack(side='left', fill='y', padx=5, pady=5)
+
+        # Description frame now on the right
+        desc_frame = ttk.LabelFrame(bottom_frame, text="Magic Item Description")
+        desc_frame.pack(side='right', fill='both', expand=True, padx=5, pady=5)
+        self.magic_item_description_text = tk.Text(desc_frame, wrap='word', height=10, width=80, state='disabled')
+        self.magic_item_description_text.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Dropdown for selecting magic item
+        self.magic_item_var = tk.StringVar()
+        # Build list from each item's internal 'name' field (fallback to key) and create lookup
+        all_items = []
+        self.magic_item_lookup = {}
+        for group, group_dict in self.MAGIC_ITEMS.items():
+            for key, item_data in group_dict.items():
+                raw_name = item_data.get('name', key)
+                display_name = self.sanitize_item_name(raw_name)
+                if display_name not in self.magic_item_lookup:  # avoid duplicates
+                    # Store cleaned name inside a shallow copy to preserve description etc.
+                    stored = dict(item_data)
+                    stored['name'] = display_name
+                    if 'description' in stored:
+                        stored['description'] = self.sanitize_text(stored['description'])
+                    self.magic_item_lookup[display_name] = stored
+                    all_items.append(display_name)
+        # Prepend custom item label
+        values_list = [self.CUSTOM_ITEM_LABEL] + sorted(all_items)
+        self.magic_item_combo = ttk.Combobox(magic_items_frame, textvariable=self.magic_item_var, values=values_list, state='readonly', width=40)
+        self.magic_item_combo.pack(padx=5, pady=2)
+        self.magic_item_combo.bind('<<ComboboxSelected>>', self.on_magic_item_selected)  # unchanged binding
+
+        # Variant selection and charges input
+        self.variant_var = tk.StringVar()
+        self.variant_combo = ttk.Combobox(magic_items_frame, textvariable=self.variant_var, state='readonly', width=10)
+        self.variant_combo.pack(padx=5, pady=2)
+        self.charges_var = tk.StringVar(value="")
+        self.charges_entry = ttk.Entry(magic_items_frame, textvariable=self.charges_var, width=5)
+        self.charges_entry.pack(padx=5, pady=2)
+
+        # Add button
+        self.add_magic_item_btn = ttk.Button(magic_items_frame, text="Add Item", command=self.add_magic_item)
+        self.add_magic_item_btn.pack(padx=5, pady=2)
+
+        # Listbox for selected items
+        self.selected_magic_items = []
+        self.magic_items_listbox = tk.Listbox(magic_items_frame, height=7, width=60)
+        self.magic_items_listbox.pack(padx=5, pady=2)
+        # Correct the binding to use the existing handler name
+        self.magic_items_listbox.bind('<<ListboxSelect>>', self.on_magic_item_selected)
+
+        # Remove button
+        self.remove_magic_item_btn = ttk.Button(magic_items_frame, text="Remove Item", command=self.remove_magic_item)
+        self.remove_magic_item_btn.pack(padx=5, pady=2)
+        # Use Charge button
+        self.use_charge_btn = ttk.Button(magic_items_frame, text="Use Charge", command=self.use_magic_item_charge)
+        self.use_charge_btn.pack(padx=5, pady=2)
+        # Recharge buttons
+        self.recharge_item_btn = ttk.Button(magic_items_frame, text="Recharge Item", command=self.recharge_magic_item)
+        self.recharge_item_btn.pack(padx=5, pady=2)
 
         # Combat Stats Frame
         combat_frame = ttk.LabelFrame(frame, text="Combat Statistics")
@@ -167,79 +292,6 @@ class BasicInfoTab:
         self.magic_dust_entry = ttk.Entry(resources_frame)
         self.magic_dust_entry.grid(row=1, column=1, padx=5, pady=2)
 
-        # Right side frame for dice roller
-        right_frame = ttk.Frame(main_frame)
-        right_frame.pack(side='right', fill='both', padx=5, pady=5)
-
-        # Dice Roller Frame
-        dice_frame = ttk.LabelFrame(right_frame, text="Dice Roller")
-        dice_frame.pack(fill='both', expand=True, padx=5, pady=5)
-
-        # Result display
-        self.dice_result_var = tk.StringVar(value="Roll some dice!")
-        result_label = ttk.Label(dice_frame, textvariable=self.dice_result_var, 
-                               font=('Arial', 12), wraplength=200)
-        result_label.pack(padx=5, pady=5)
-
-        # Dice buttons frame
-        dice_buttons_frame = ttk.Frame(dice_frame)
-        dice_buttons_frame.pack(fill='x', padx=5, pady=5)
-
-        # Common dice buttons
-        common_dice = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
-        for i, die in enumerate(common_dice):
-            btn = ttk.Button(dice_buttons_frame, text=die, 
-                           command=lambda d=die: self.roll_dice(d))
-            btn.grid(row=i//4, column=i%4, padx=2, pady=2, sticky='ew')
-
-        # Custom roll frame
-        custom_frame = ttk.Frame(dice_frame)
-        custom_frame.pack(fill='x', padx=5, pady=5)
-
-        ttk.Label(custom_frame, text="Custom:").pack(side='left', padx=5)
-        self.custom_dice_var = tk.StringVar(value="1d6")
-        custom_entry = ttk.Entry(custom_frame, textvariable=self.custom_dice_var, width=10)
-        custom_entry.pack(side='left', padx=5)
-        custom_btn = ttk.Button(custom_frame, text="Roll", 
-                              command=lambda: self.roll_custom_dice(self.custom_dice_var.get()))
-        custom_btn.pack(side='left', padx=5)
-
-        # Aspect modifiers frame
-        modifiers_frame = ttk.Frame(dice_frame)
-        modifiers_frame.pack(fill='x', padx=5, pady=5)
-
-        # Create checkboxes for each aspect
-        self.aspect_check_vars = {}
-        for aspect in ['melee', 'ranged', 'rogue', 'magic']:
-            check_frame = ttk.Frame(modifiers_frame)
-            check_frame.pack(side='left', padx=5)
-            
-            self.aspect_check_vars[aspect] = tk.BooleanVar(value=False)
-            check = ttk.Checkbutton(check_frame, text=aspect.capitalize(), 
-                                  variable=self.aspect_check_vars[aspect])
-            check.pack(side='left')
-
-        # Roll History Frame
-        history_frame = ttk.LabelFrame(dice_frame, text="Roll History")
-        history_frame.pack(fill='both', expand=True, padx=5, pady=5)
-
-        # Create a scrollbar for the history listbox
-        scrollbar = ttk.Scrollbar(history_frame)
-        scrollbar.pack(side='right', fill='y')
-
-        # Create the history listbox
-        self.roll_history_listbox = tk.Listbox(history_frame, yscrollcommand=scrollbar.set)
-        self.roll_history_listbox.pack(fill='both', expand=True, padx=5, pady=5)
-        scrollbar.config(command=self.roll_history_listbox.yview)
-
-        # Clear history button
-        clear_history_btn = ttk.Button(history_frame, text="Clear History", 
-                                     command=self.clear_roll_history)
-        clear_history_btn.pack(padx=5, pady=5)
-
-        # Initialize roll history
-        self.roll_history = []
-        
         # Initialize initiative display
         self.update_initiative_display()
 
@@ -331,80 +383,29 @@ class BasicInfoTab:
         self.calculate_indoor_speed()
         self.update_initiative_display()
 
-    def roll_dice(self, die_type):
-        """Roll a specific die type"""
-        die_map = {'d4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20, 'd100': 100}
-        
-        if die_type in die_map:
-            result = random.randint(1, die_map[die_type])
-            self.dice_result_var.set(f"Rolled {die_type}: {result}")
-            self.add_to_roll_history(f"{die_type}: {result}")
-        else:
-            self.dice_result_var.set("Invalid die type")
-
-    def roll_custom_dice(self, dice_string):
-        """Roll custom dice (e.g., '2d6+3')"""
-        try:
-            # Parse dice string like "2d6+3" or "1d20"
-            parts = dice_string.lower().replace(' ', '').split('d')
-            if len(parts) != 2:
-                raise ValueError("Invalid dice format")
-            
-            num_dice = int(parts[0]) if parts[0] else 1
-            die_part = parts[1]
-            
-            # Check for modifiers
-            if '+' in die_part:
-                die_size, modifier = die_part.split('+')
-                modifier = int(modifier)
-            elif '-' in die_part:
-                die_size, modifier = die_part.split('-')
-                modifier = -int(modifier)
-            else:
-                die_size = die_part
-                modifier = 0
-            
-            die_size = int(die_size)
-            
-            # Roll the dice
-            total = sum(random.randint(1, die_size) for _ in range(num_dice)) + modifier
-            
-            result_text = f"{dice_string}: {total}"
-            if modifier != 0:
-                result_text += f" (dice: {total - modifier}, modifier: {modifier:+d})"
-            
-            self.dice_result_var.set(result_text)
-            self.add_to_roll_history(result_text)
-            
-        except (ValueError, IndexError):
-            self.dice_result_var.set("Invalid dice format. Use format like '2d6+3'")
-
-    def add_to_roll_history(self, result_text):
-        """Add roll result to history"""
-        self.roll_history.append(result_text)
-        self.roll_history_listbox.insert(0, result_text)
-        
-        # Keep only last 50 entries
-        if len(self.roll_history) > 50:
-            self.roll_history.pop(0)
-            self.roll_history_listbox.delete(tk.END)
-
-    def clear_roll_history(self):
-        """Clear the roll history"""
-        self.roll_history.clear()
-        self.roll_history_listbox.delete(0, tk.END)
 
     def get_data(self):
         """Get all data from the tab"""
-        # Calculate indoor speed dynamically
         rank = int(self.rank_var.get())
         unarmed_combat = self.unarmed_combat_var.get()
-        
         if unarmed_combat:
             indoor_speed = 35 + (5 * rank)
         else:
             indoor_speed = 30
-        
+        # Prepare magic items data
+        magic_items_export = []
+        for item in self.selected_magic_items:
+            exported = {'name': self.sanitize_item_name(item['name'])}
+            if item.get('variant'):
+                exported['variant'] = item['variant']
+            if 'current_charges' in item and 'max_charges' in item:
+                exported['current_charges'] = item['current_charges']
+                exported['max_charges'] = item['max_charges']
+            if 'charges_note' in item:
+                exported['charges_note'] = item['charges_note']
+            if 'description' in item:
+                exported['description'] = self.sanitize_text(item['description'])
+            magic_items_export.append(exported)
         return {
             'name': self.name_entry.get(),
             'playerName': self.player_name_entry.get(),
@@ -414,7 +415,7 @@ class BasicInfoTab:
             'unarmedCombat': self.unarmed_combat_var.get(),
             'rank': int(self.rank_var.get()),
             'rankPoints': int(self.total_rank_points_var.get()),
-            'magicItems': [entry.get() for entry in self.magic_item_entries],
+            'magicItems': magic_items_export,
             'combatStats': {
                 'hp': int(self.hp_entry.get() or 0),
                 'maxHp': int(self.max_hp_entry.get() or 0),
@@ -452,10 +453,26 @@ class BasicInfoTab:
         
         # Set magic items
         magic_items = data.get('magicItems', [])
-        for i, entry in enumerate(self.magic_item_entries):
-            entry.delete(0, tk.END)
-            if i < len(magic_items):
-                entry.insert(0, magic_items[i])
+        self.selected_magic_items = []
+        for saved in magic_items:
+            item_entry = {'name': self.sanitize_item_name(saved.get('name',''))}
+            if saved.get('variant'):
+                item_entry['variant'] = saved['variant']
+            if 'current_charges' in saved and 'max_charges' in saved:
+                item_entry['current_charges'] = saved['current_charges']
+                item_entry['max_charges'] = saved['max_charges']
+            if 'charges_note' in saved:
+                item_entry['charges_note'] = saved['charges_note']
+            if 'description' in saved and saved['description']:
+                clean_desc = self.sanitize_text(saved['description'])
+                item_entry['description'] = clean_desc
+                if saved.get('name') and item_entry['name'] not in self.magic_item_lookup:
+                    self.magic_item_lookup[item_entry['name']] = {
+                        'name': item_entry['name'],
+                        'description': clean_desc
+                    }
+            self.selected_magic_items.append(item_entry)
+        self.refresh_magic_items_listbox()
         
         # Set combat stats
         combat_stats = data.get('combatStats', {})
@@ -546,4 +563,243 @@ class BasicInfoTab:
         
         print(f"[DEBUG] Initiative calculated: rank={int(self.rank_var.get())}, unarmed={self.unarmed_combat_var.get()}, initiative={initiative}")
 
- 
+    def update_magic_item_description(self, item_data):
+        """Populate the description text widget with the selected item's info."""
+        if not hasattr(self, 'magic_item_description_text'):
+            return
+        self.magic_item_description_text.config(state='normal')
+        self.magic_item_description_text.delete('1.0', tk.END)
+        if item_data:
+            desc = self.sanitize_text(item_data.get('description', '(No description available)'))
+            if 'variants' in item_data:
+                desc += "\n\nVariants: " + ", ".join(item_data['variants'])
+            if 'charges' in item_data:
+                desc += f"\nDefault Charges: {item_data['charges']}"
+        else:
+            desc = "Select a magic item to view its description."
+        desc = re.sub(r"\s+", " ", desc).strip()
+        self.magic_item_description_text.insert('1.0', desc)
+        self.magic_item_description_text.config(state='disabled')
+
+    def open_custom_item_dialog(self):
+        dialog = tk.Toplevel(self.tab)
+        dialog.title('Create Custom Magic Item')
+        dialog.transient(self.tab)
+        dialog.grab_set()
+
+        tk.Label(dialog, text='Name:').grid(row=0, column=0, sticky='e', padx=5, pady=5)
+        name_var = tk.StringVar()
+        name_entry = ttk.Entry(dialog, textvariable=name_var, width=40)
+        name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(dialog, text='Max Charges (optional):').grid(row=1, column=0, sticky='e', padx=5, pady=5)
+        charges_var = tk.StringVar()
+        charges_entry = ttk.Entry(dialog, textvariable=charges_var, width=10)
+        charges_entry.grid(row=1, column=1, sticky='w', padx=5, pady=5)
+
+        tk.Label(dialog, text='Description:').grid(row=2, column=0, sticky='ne', padx=5, pady=5)
+        desc_text = tk.Text(dialog, width=50, height=10, wrap='word')
+        desc_text.grid(row=2, column=1, padx=5, pady=5)
+
+        button_frame = ttk.Frame(dialog)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=10)
+
+        def confirm():
+            name = self.sanitize_item_name(name_var.get().strip())
+            if not name:
+                dialog.destroy()
+                return
+            if name in self.magic_item_lookup:
+                # Prevent overwriting existing items
+                dialog.destroy()
+                return
+            description = self.sanitize_text(desc_text.get('1.0', tk.END).strip())
+            charges_input = charges_var.get().strip()
+            item_def = {'name': name, 'description': description}
+            if charges_input:
+                try:
+                    ch = int(charges_input)
+                    item_def['charges'] = ch
+                except ValueError:
+                    pass
+            self.magic_item_lookup[name] = item_def
+            # Update combobox values
+            current_vals = list(self.magic_item_combo['values'])
+            if name not in current_vals:
+                current_vals.append(name)
+                # Keep custom label at top, sort rest
+                base = [v for v in current_vals if v not in (self.CUSTOM_ITEM_LABEL, name) and v]
+                self.magic_item_combo['values'] = [self.CUSTOM_ITEM_LABEL] + sorted(base + [name])
+            self.magic_item_var.set(name)
+            # Set charges entry for add_magic_item to pick up
+            if 'charges' in item_def:
+                self.charges_var.set(str(item_def['charges']))
+            else:
+                self.charges_var.set('')
+            self.variant_combo['values'] = []
+            self.variant_var.set('')
+            self.update_magic_item_description(item_def)
+            dialog.destroy()
+
+        ttk.Button(button_frame, text='Add Item', command=confirm).pack(side='left', padx=5)
+        ttk.Button(button_frame, text='Cancel', command=dialog.destroy).pack(side='left', padx=5)
+        name_entry.focus_set()
+
+    # --- Missing methods re-added ---
+    def update_use_charge_state(self, event=None):
+        if not hasattr(self, 'magic_items_listbox'):
+            return
+        selection = self.magic_items_listbox.curselection()
+        # Safely disable if buttons exist
+        def disable(btn):
+            try:
+                btn.state(['disabled'])
+            except Exception:
+                btn.configure(state='disabled')
+        def enable(btn):
+            try:
+                btn.state(['!disabled'])
+            except Exception:
+                btn.configure(state='normal')
+        if not selection:
+            if hasattr(self, 'use_charge_btn'): disable(self.use_charge_btn)
+            if hasattr(self, 'recharge_item_btn'): disable(self.recharge_item_btn)
+            return
+        idx = selection[0]
+        if idx >= len(self.selected_magic_items):
+            if hasattr(self, 'use_charge_btn'): disable(self.use_charge_btn)
+            if hasattr(self, 'recharge_item_btn'): disable(self.recharge_item_btn)
+            return
+        item = self.selected_magic_items[idx]
+        # Use charge enabled only if current_charges > 0
+        if 'current_charges' in item and item.get('current_charges', 0) > 0:
+            if hasattr(self, 'use_charge_btn'): enable(self.use_charge_btn)
+        else:
+            if hasattr(self, 'use_charge_btn'): disable(self.use_charge_btn)
+        # Recharge enabled if has max and not already full
+        if 'current_charges' in item and 'max_charges' in item and item['current_charges'] < item['max_charges']:
+            if hasattr(self, 'recharge_item_btn'): enable(self.recharge_item_btn)
+        else:
+            if hasattr(self, 'recharge_item_btn'): disable(self.recharge_item_btn)
+
+    def use_magic_item_charge(self):
+        if not hasattr(self, 'magic_items_listbox'):
+            return
+        selection = self.magic_items_listbox.curselection()
+        if not selection:
+            return
+        idx = selection[0]
+        if idx >= len(self.selected_magic_items):
+            return
+        item = self.selected_magic_items[idx]
+        if 'current_charges' in item and item['current_charges'] > 0:
+            item['current_charges'] -= 1
+            if item['current_charges'] < 0:
+                item['current_charges'] = 0
+            self.refresh_magic_items_listbox()
+            self.magic_items_listbox.select_set(idx)
+            self.magic_items_listbox.event_generate('<<ListboxSelect>>')
+
+    def recharge_magic_item(self):
+        if not hasattr(self, 'magic_items_listbox'):
+            return
+        selection = self.magic_items_listbox.curselection()
+        if not selection:
+            return
+        idx = selection[0]
+        if idx >= len(self.selected_magic_items):
+            return
+        item = self.selected_magic_items[idx]
+        if 'current_charges' in item and 'max_charges' in item:
+            item['current_charges'] = item['max_charges']
+            self.refresh_magic_items_listbox()
+            self.magic_items_listbox.select_set(idx)
+            self.magic_items_listbox.event_generate('<<ListboxSelect>>')
+
+    def remove_magic_item(self):
+        if not hasattr(self, 'magic_items_listbox'):
+            return
+        selection = self.magic_items_listbox.curselection()
+        if not selection:
+            return
+        idx = selection[0]
+        if idx >= len(self.selected_magic_items):
+            return
+        del self.selected_magic_items[idx]
+        self.refresh_magic_items_listbox()
+        # Select nearest remaining item
+        if self.selected_magic_items:
+            new_index = min(idx, len(self.selected_magic_items) - 1)
+            self.magic_items_listbox.select_set(new_index)
+            self.magic_items_listbox.event_generate('<<ListboxSelect>>')
+        else:
+            self.update_use_charge_state()
+
+    # --- Newly added methods ---
+    def add_magic_item(self):
+        """Add the currently selected magic item (or open custom dialog)."""
+        if not hasattr(self, 'magic_item_var'):
+            return
+        name = self.magic_item_var.get().strip()
+        if not name:
+            return
+        if name == self.CUSTOM_ITEM_LABEL:
+            self.open_custom_item_dialog()
+            return
+        item_def = self.magic_item_lookup.get(name)
+        if not item_def:
+            return
+        # Build new entry
+        entry = {
+            'name': item_def.get('name', name)
+        }
+        # Variant
+        if hasattr(self, 'variant_var'):
+            variant = self.variant_var.get().strip()
+            if variant:
+                entry['variant'] = variant
+        # Description
+        if 'description' in item_def:
+            entry['description'] = self.sanitize_text(item_def['description'])
+        # Charges
+        max_charges = None
+        if hasattr(self, 'charges_var'):
+            raw_ch = self.charges_var.get().strip()
+            if raw_ch:
+                try:
+                    max_charges = int(raw_ch)
+                except ValueError:
+                    max_charges = None
+        if max_charges is None and 'charges' in item_def:
+            try:
+                max_charges = int(item_def['charges'])
+            except Exception:
+                max_charges = None
+        if max_charges is not None:
+            entry['max_charges'] = max_charges
+            entry['current_charges'] = max_charges
+        self.selected_magic_items.append(entry)
+        self.refresh_magic_items_listbox()
+        # Select the newly added item
+        if hasattr(self, 'magic_items_listbox'):
+            self.magic_items_listbox.select_clear(0, tk.END)
+            self.magic_items_listbox.select_set(tk.END)
+            self.magic_items_listbox.event_generate('<<ListboxSelect>>')
+        self.update_use_charge_state()
+
+    def refresh_magic_items_listbox(self):
+        """Refresh listbox display of selected magic items."""
+        if not hasattr(self, 'magic_items_listbox'):
+            return
+        self.magic_items_listbox.delete(0, tk.END)
+        for item in self.selected_magic_items:
+            parts = [item.get('name', '')]
+            if item.get('variant'):
+                parts.append(f"({item['variant']})")
+            if 'current_charges' in item and 'max_charges' in item:
+                parts.append(f"Charges {item['current_charges']}/{item['max_charges']}")
+            elif 'charges_note' in item:
+                parts.append(item['charges_note'])
+            display = ' - '.join([p for p in parts if p])
+            self.magic_items_listbox.insert(tk.END, display)
+        self.update_use_charge_state()

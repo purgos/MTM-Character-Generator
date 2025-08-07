@@ -42,7 +42,6 @@ mtm-character-sheet-python/
   - Magic items tracking
   - Combat statistics (HP, initiative, hero points)
   - Resources (money, magic dust)
-  - Dice roller with history
   - Aspect modifiers for dice rolls
 
 #### 2. Aspects Tab (`aspects_tab.py`)

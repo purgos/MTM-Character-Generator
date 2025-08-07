@@ -48,7 +48,12 @@ MAGIC_ITEMS = {
         },
         'Belt of the Titans': {
             'name': 'Belt of the Titans',
-            'description': 'This permanent use magic item will temporarily increase the Warrior Melee aspect die of the wearer and one D12 gear die to a D20 for 10 rounds per day as long as it is worn and once activated by uttering the command word. Can be used multiple times per day but for no more than the 10 total rounds per day. Bolts/Arrows of Armor Penetration: These reusable items come in a quiver of 10. If these items are shot at a target, the bolts/arrows will ignore any armor bonuses.',
+            'description': 'This permanent use magic item will temporarily increase the Warrior Melee aspect die of the wearer and one D12 gear die to a D20 for 10 rounds per day as long as it is worn and once activated by uttering the command word. Can be used multiple times per day but for no more than the 10 total rounds per day.',
+            'type': 'permanent'
+        },
+        'Bolts/Arrows of Armor Penetration': {
+            'name': 'Bolts/Arrows of Armor Penetration',
+            'description': 'These reusable items come in a quiver of 10. If these items are shot at a target, the bolts/arrows will ignore any armor bonuses.',
             'type': 'permanent'
         },
         'Boots of Free Movement': {
@@ -58,7 +63,12 @@ MAGIC_ITEMS = {
         },
         'Boots of Speed': {
             'name': 'Boots of Speed',
-            'description': 'This permanent use item allows the wearer to move at double their normal movement rate. It does not confer any extra attacks. Does not stack with Belt of Speed. Bracers of Armor (Dx): This permanent use magic item functions just like normal armor except it does not take up a gear die slot. The GM will assign a base gear die value when found from D4-D12. These do not stack with any other type(s) of armor or other Bracers.',
+            'description': 'This permanent use item allows the wearer to move at double their normal movement rate. It does not confer any extra attacks. Does not stack with Belt of Speed.',
+            'type': 'permanent'
+        },
+        'Bracers of Armor (Dx)': {
+            'name': 'Bracers of Armor',
+            'description': 'This permanent use magic item functions just like normal armor except it does not take up a gear die slot. The GM will assign a base gear die value when found from D4-D12. These do not stack with any other type(s) of armor or other Bracers.',
             'type': 'permanent'
         },
         'Brooch of Shielding': {
@@ -76,16 +86,22 @@ MAGIC_ITEMS = {
             'description': 'This permanent use item is a small metal box 6 inches by 6 inches. Upon opening, the box will turn into a small encampment for up to 8 people complete with tents, bedrolls, firewood, etc.',
             'type': 'permanent'
         },
-        'Cloak of Spell Resistance +': {
+        'Cloak of Spell Resistance': {
             'name': 'Cloak of Spell Resistance +',
-            'description': 'This permanent use item confers a permanent bonus of +1 to +5 to the wearer's magic saves as long as it is worn.',
+            'description': "This permanent use item confers a permanent bonus of +1 to +5 to the wearer's magic saves as long as it is worn.",
             'type': 'permanent',
             'variants': ['+1', '+2', '+3', '+4', '+5']
         },
         'Chime of Opening': {
             'name': 'Chime of Opening',
-            'description': 'Striking this object will unlock all locked or magically locked doors within 60 feet. It shatters after one use. Cloak of Displacement (Dx): This permanent use magic item allows the wearer to utilize the Displacement spell once per day when worn for a number of rounds equal to the gear die assigned by the GM when the item is found. For example: A D6 Cloak of Displacement when activated will function as the spell for 6 rounds (no Aspect or Gear Die checks needed). Cloak of Spell Resistance +: This permanent use item confers a permanent bonus of +1 to +5 to the wearer’s magic saves as long as it is worn.',
+            'description': 'Striking this object will unlock all locked or magically locked doors within 60 feet. It shatters after one use.',
             'type': 'permanent'
+        },
+        'Cloak of Displacement': {
+            'name': 'Cloak of Displacement',
+            'description': 'This permanent use magic item allows the wearer to utilize the Displacement spell once per day when worn for a number of rounds equal to the gear die assigned by the GM when the item is found. For example: A D6 Cloak of Displacement when activated will function as the spell for 6 rounds (no Aspect or Gear Die checks needed).',
+            'type': 'permanent',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
         'Elvin Boots': {
             'name': 'Elvin Boots',
@@ -202,8 +218,8 @@ MAGIC_ITEMS = {
             'description': 'Creature type field for Oil of Opponents Bane',
             'type': 'permanent'
         },
-        'Oil of Positive Magic Armor+': {
-            'name': 'Oil of Positive Magic Armor+',
+        'Oil of Positive Magic Armor': {
+            'name': 'Oil of Positive Magic Armor',
             'description': 'This one-time use item permanently increases the damage reduction of any one suit of armor or bracers one to five steps. For example, A suit of D4 armor would absorb 2 points of damage, D6 armor absorbs 3, etc.',
             'type': 'oil',
             'variants': ['+1', '+2', '+3', '+4', '+5']
@@ -303,7 +319,7 @@ MAGIC_ITEMS = {
         },
         'Alarm': {
             'name': 'Wand of Alarm',
-            'description': 'Functions as per the spell of the same name. Wand of All’s Clear: Functions as per the spell of the same name.',
+            'description': 'Functions as per the spell of the same name.',
             'type': 'wand',
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
@@ -329,6 +345,13 @@ MAGIC_ITEMS = {
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
+        'All’s Clear': {
+            'name': 'Wand of All’s Clear',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
         'Buried Alive': {
             'name': 'Wand of Buried Alive',
             'description': 'Functions as per the spell of the same name.',
@@ -345,7 +368,14 @@ MAGIC_ITEMS = {
         },
         'Chain Lightning': {
             'name': 'Wand of Chain Lightning',
-            'description': 'Functions as per the spell of the same name. Wand of Charm Monster/Person: Functions as per the spell of the same name.',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'Charm Monster/Person': {
+            'name': 'Wand of Charm Monster/Person',
+            'description': 'Functions as per the spell of the same name.',
             'type': 'wand',
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
@@ -429,7 +459,14 @@ MAGIC_ITEMS = {
         },
         'Drain Protection': {
             'name': 'Wand of Drain Protection',
-            'description': 'Functions as per the spell of the same name. Wand of Dude You’re Stoned: Functions as per the spell of the same name.',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'Dude You’re Stoned': {
+            'name': 'Wand of Dude You’re Stoned',
+            'description': 'Functions as per the spell of the same name.',
             'type': 'wand',
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
@@ -905,7 +942,14 @@ MAGIC_ITEMS = {
         },
         'Sleep': {
             'name': 'Wand of Sleep',
-            'description': 'Functions as per the spell of the same name. Wand of So That’s It: Functions as per the spell of the same name.',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'So That’s It': {
+            'name': 'Wand of So That’s It',
+            'description': 'Functions as per the spell of the same name.',
             'type': 'wand',
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
@@ -982,7 +1026,14 @@ MAGIC_ITEMS = {
         },
         'That Hurts': {
             'name': 'Wand of That Hurts',
-            'description': 'Functions as per the spell of the same name. Wand of That’s Nasty: Functions as per the spell of the same name.',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'That’s Nasty': {
+            'name': 'Wand of That’s Nasty',
+            'description': 'Functions as per the spell of the same name.',
             'type': 'wand',
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
@@ -1031,7 +1082,28 @@ MAGIC_ITEMS = {
         },
         'Wondrous Effect': {
             'name': 'Wand of Wondrous Effect',
-            'description': 'Functions asper the spell of the same name. Wand of You’re Welcome: Functions asper the spell of the same name. Wand of You’re Not So Tough: Functions as per the spell of the same name. Wand of You’re Special: Functions as per the spell of the same name.',
+            'description': 'Functions asper the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'You’re Welcome': {
+            'name': 'Wand of You’re Welcome',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'You’re Not So Tough': {
+            'name': 'Wand of You’re Not So Tough',
+            'description': 'Functions as per the spell of the same name.',
+            'type': 'wand',
+            'charges': 7,
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'You’re Special': {
+            'name': 'Wand of You’re Special',
+            'description': 'Functions as per the spell of the same name.',
             'type': 'wand',
             'charges': 7,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
@@ -1047,7 +1119,13 @@ MAGIC_ITEMS = {
         },
         'Alarm': {
             'name': 'Potion of Alarm',
-            'description': 'This one-time use item functions as per the spell of the same name and only affects the imbiber. Potion of All’s Clear: This one- time use item functions as per the spell of the same name and only affects the imbiber.',
+            'description': 'This one-time use item functions as per the spell of the same name and only affects the imbiber.',
+            'type': 'potion',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'All’s Clear': {
+            'name': 'Potion of All’s Clear',
+            'description': 'This one- time use item functions as per the spell of the same name and only affects the imbiber.',
             'type': 'potion',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -1083,7 +1161,13 @@ MAGIC_ITEMS = {
         },
         'Chain Lightning': {
             'name': 'Potion of Chain Lightning',
-            'description': 'This one-time use item functions as per the spell of the same name and only affects the imbiber. Potion of Charm Monster/Person: This one-time use item functions as per the spell of the same name and only affects the imbiber.',
+            'description': 'This one-time use item functions as per the spell of the same name and only affects the imbiber.',
+            'type': 'potion',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'Charm Monster/Person': {
+            'name': 'Potion of Charm Monster/Person',
+            'description': 'This one-time use item functions as per the spell of the same name and only affects the imbiber.',
             'type': 'potion',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -1668,7 +1752,11 @@ MAGIC_ITEMS = {
         },
         'Alarm': {
             'name': 'Scroll of Alarm',
-            'description': 'This one-time use item functions as per the spell of the same name. Scroll of All’s Clear: This one-time use item functions as per the spell of the same name.',
+            'description': 'This one-time use item functions as per the spell of the same name.',
+        },
+        'All’s Clear': {
+            'name': 'Scroll of All’s Clear',
+            'description': 'This one-time use item functions as per the spell of the same name.',
             'type': 'scroll',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -1704,7 +1792,13 @@ MAGIC_ITEMS = {
         },
         'Chain Lightning': {
             'name': 'Scroll of Chain Lightning',
-            'description': 'This one- time use item functions as per the spell of the same name. Scroll of Charm Monster/Person: This one-time use item functions as per the spell of the same name.',
+            'description': 'This one- time use item functions as per the spell of the same name.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'Charm Monster/Person': {
+            'name': 'Scroll of Charm Monster/Person',
+            'description': 'This one-time use item functions as per the spell of the same name.',
             'type': 'scroll',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -1776,7 +1870,13 @@ MAGIC_ITEMS = {
         },
         'Drain Protection': {
             'name': 'Scroll of Drain Protection',
-            'description': 'This one-time use item allows the reader to ignore any one drain attack and instead take 1d6 damage. This damage ignores armor or shield bonuses. Scroll of Dude You’re Stoned: This one-time use item functions as per the spell of the same name.',
+            'description': 'This one-time use item allows the reader to ignore any one drain attack and instead take 1d6 damage. This damage ignores armor or shield bonuses.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'Dude You’re Stoned': {
+            'name': 'Scroll of Dude You’re Stoned',
+            'description': 'This one-time use item functions as per the spell of the same name.',
             'type': 'scroll',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -2178,7 +2278,13 @@ MAGIC_ITEMS = {
         },
         'Sleep': {
             'name': 'Scroll of Sleep',
-            'description': 'This one-time use item functions as per the spell of the same name. Scroll of So That’s It: This one-time use item functions as per the spell of the same name.',
+            'description': 'This one-time use item functions as per the spell of the same name.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'So That’s It': {
+            'name': 'Scroll of So That’s It',
+            'description': 'This one-time use item functions as per the spell of the same name.',
             'type': 'scroll',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -2250,7 +2356,13 @@ MAGIC_ITEMS = {
         },
         'That Hurts': {
             'name': 'Scroll of That Hurts',
-            'description': 'This one-time use item functions as per the spell of the same name. Scroll of That’s Nasty: This one-time use item functions as per the spell of the same name.',
+            'description': 'This one-time use item functions as per the spell of the same name.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'That’s Nasty': {
+            'name': 'Scroll of That’s Nasty',
+            'description': 'This one-time use item functions as per the spell of the same name.',
             'type': 'scroll',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -2298,7 +2410,25 @@ MAGIC_ITEMS = {
         },
         'Wondrous Effect': {
             'name': 'Scroll of Wondrous Effect',
-            'description': 'This one- time use item functions as per the spell of the same name. Scroll of You’re Welcome: This one- time use item functions as per the spell of the same name. Scroll of You’re Not So Tough: This one-time use item functions as per the spell of the same name. Scroll of You’re Special: This one-time use item functions as per the spell of the same name. Shape Shifter’s Robe: This permanent use item allows the wearer to assume to look and appearance of any creature type the wearer has seen as long as it is worn. It does not allow the wearer to assume the appearance of specific creatures, nor does it grant any other abilities.',
+            'description': 'This one- time use item functions as per the spell of the same name.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'You’re Welcome': {
+            'name': 'Scroll of You’re Welcome',
+            'description': 'This one- time use item functions as per the spell of the same name.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'You’re Not So Tough': {
+            'name': 'Scroll of You’re Not So Tough',
+            'description': 'This one-time use item functions as per the spell of the same name.',
+            'type': 'scroll',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
+        },
+        'You’re Special': {
+            'name': 'Scroll of You’re Special',
+            'description': 'This one-time use item functions as per the spell of the same name.',
             'type': 'scroll',
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
@@ -2411,8 +2541,14 @@ MAGIC_ITEMS = {
         },
         'Spell Immunity': {
             'name': 'Ring of Spell Immunity',
-            'description': 'This permanent use item allows the wearer to be immune to all harmful spells and spell like effects permanently as long as it is worn. Ring of Spell Storing (Dx): This permanent use magic item can store any one spell at the assigned gear die. It will function as the spell would normally but does not take up a gear die slot. This ring can be used once per encounter.',
+            'description': 'This permanent use item allows the wearer to be immune to all harmful spells and spell like effects permanently as long as it is worn.',
             'type': 'ring'
+        },
+        'Spell Storing': {
+            'name': 'Ring of Spell Storing',
+            'description': 'This permanent use magic item can store any one spell at the assigned gear die. It will function as the spell would normally but does not take up a gear die slot. This ring can be used once per encounter.',
+            'type': 'ring',
+            'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
         'Supreme Skill': {
             'name': 'Ring of Supreme Skill',
@@ -2497,7 +2633,17 @@ MAGIC_ITEMS = {
         },
         'Destruction': {
             'name': 'Oil of Destruction',
-            'description': 'This one-time use item when applied to any weapon will allow the wearer to do an extra die of damage with each attack up to a D12. This bonus stacks with crits and all other magic items or abilities related to crits. Oil of Improved Critical+: This one- time use item when applied to any weapon conveys a permanent +1 to +3 to the wielder’s aspect die roll to determine a critical hit. +1 +2 +3 Oil of Magic Shield -1: This cursed item will detect as Oil of Magic Shield +1, however, when applied to a shield of any type will cause the shield to crumble to dust when hit unless the curse is detected with an Analyze spell check of 10 or higher. Oil of Magic Shield +1: This one- time use item permanently increases the protection of one shield. When attacked, the attacker rolls three damage rolls and takes the least of the three. Oil of Magic Weapon +: This one-time use item permanently increases the gear die of any one weapon one to five steps and adds a permanent plus one to Warrior Melee or Warrior Ranged aspect checks to hit (once for the life of the weapon). For example, A D8 sword would become a D10 sword, or a D12 sword would become a D12+D4 sword up to a maximum of D12 +D12. +1 +2 +3 +4 +5 Oil of Negative Magic Armor-: This one- time use item decreases the armor or bracers damage reduction value by 1-5 all the way down to zero. -1 -2 -3 -4 -5',
+            'description': 'This one-time use item when applied to any weapon will allow the wearer to do an extra die of damage with each attack up to a D12. This bonus stacks with crits and all other magic items or abilities related to crits.',
+            'type': 'oil'
+        },
+        'Magic Shield -1': {
+            'name': 'Oil of Magic Shield -1',
+            'description': 'This cursed item will detect as Oil of Magic Shield +1, however, when applied to a shield of any type will cause the shield to crumble to dust when hit unless the curse is detected with an Analyze spell check of 10 or higher.',
+            'type': 'oil'
+        },
+        'Magic Shield +1': {
+            'name': 'Oil of Magic Shield +1',
+            'description': 'This one-time use item permanently increases the protection of one shield. When attacked, the attacker rolls three damage rolls and takes the least of the three.',
             'type': 'oil'
         },
         'Opponents Bane': {

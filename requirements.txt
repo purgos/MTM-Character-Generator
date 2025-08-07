@@ -1,0 +1,17 @@
+# Example requirements for MTM Character Generator
+# Add or remove packages as needed for your project
+
+# Core Python (no external dependencies required for basic functionality)
+
+tkinter
+
+# If you use pandas for data manipulation (uncomment if needed)
+# pandas
+
+# If you use numpy for numerical operations (uncomment if needed)
+# numpy
+
+# If you use Pillow for image handling (uncomment if needed)
+# Pillow
+
+# If you use any other packages, add them below
