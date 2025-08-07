@@ -861,6 +861,7 @@ SPELLS = {
         "duration": "Persistent",
         "frequency": "This spell can be cast once per encounter.",
         "description": "Allows the caster to take ½ of the allies' damage for a number of rounds equal to the gear die roll. A rank 7 or higher caster can elect to take all damage instead. The caster can also elect to not take the damage in any given round though not taking the damage does not extend the length of the spell."
+    },
 
     "BURIED ALIVE": {
         "prerequisite": "Magic Aspect D8",
@@ -952,9 +953,7 @@ SPELLS = {
         "frequency": "This spell can be cast once per encounter.",
         "description": "This spell allows the recipient to make a single Warrior Melee attack against all creatures that the recipient can see equal to the gear die of the spell regardless of how far away the target(s) are. The recipient will make one Warrior Melee attack roll and apply that to all targets they are attempting to hit, so this spell is all or nothing. The recipient of this spell moves at blinding speed during the round this spell is in effect and ends their turn in the original square they started in after the effect ends. The effect must be used by the end of the recipients next turn after casting or it is simply lost. A rank 7 or better caster can affect two allies per casting."
     },
-    },
-
-}
+},
 
 # Component type definitions
 COMPONENT_TYPES = {
