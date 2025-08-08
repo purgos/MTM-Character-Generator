@@ -343,17 +343,25 @@ class DiceRollerTab:
             flag_list = []
 
         is_crit = bool(self.crit_var.get())
+        has_improved_crit = 'Improved Critical' in ((self.character_data or {}).get('selectedAbilities', []) or [])
+        die_notation = f"d{sides}"
+
         if is_crit:
-            total = sides + r + rank
-            flags_str = " (crit" + (", " + ", ".join(flag_list) if flag_list else "") + ")"
-            detail = f"({sides} + {r} + {rank})"
+            if has_improved_crit:
+                total = (2 * sides) + r + rank
+                flags = ['crit', 'Improved Critical'] + flag_list
+                breakdown = f"({sides} + {sides} + {r} + {rank})"
+            else:
+                total = sides + r + rank
+                flags = ['crit'] + flag_list
+                breakdown = f"({sides} + {r} + {rank})"
         else:
             total = r + rank
-            flags_str = f" ({', '.join(flag_list)})" if flag_list else ""
-            detail = f"({r} + {rank})"
+            flags = flag_list
+            breakdown = f"({r} + {rank})"
 
-        die_notation = f"d{sides}"
-        final_text = f"Damage {die_notation} = {total}{flags_str}  ({', '.join(map(str, rolls_detail))}  +{rank})"
+        flags_str = f" ({', '.join(flags)})" if flags else ""
+        final_text = f"Damage {die_notation} = {total}{flags_str}  {breakdown}"
         
         # Update result label
         self.result_label.config(text=final_text)
