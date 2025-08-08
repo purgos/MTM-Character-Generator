@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(dirname "$(readlink -f "$0")")"
+export APPDIR="$HERE"
+# Allow loading data files added with --add-data "src:src"
+export MTM_APP_ROOT="$APPDIR"
+exec "$APPDIR/usr/bin/mtm-character-generator" "$@"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=MTM Character Generator
+Comment=Create and manage MTM characters
+Exec=mtm-character-generator
+Icon=MTM-Character-Generator
+Terminal=false
+Categories=Game;Utility;
