@@ -16,6 +16,18 @@ except ModuleNotFoundError:
 
 class BasicInfoTab:
     CUSTOM_ITEM_LABEL = 'Custom Item...'
+    CUSTOM_PROFESSION_LABEL = 'Custom Profession...'
+    PROFESSION_OPTIONS = [
+        'Alchemist', 'Architect', 'Armorsmith', 'Barrister', 'Basketweaver', 'Blacksmith',
+        'Boatman/Sailor', 'Bookbinder', 'Bookkeeper', 'Bowyer/Fletcher', 'Brewer',
+        'Calligrapher', 'Carpenter', 'Cobbler', 'Cook', 'Driver', 'Engineer', 'Farmer',
+        'Fisherman', 'Forgerer/Scribe', 'Gambler', 'Gardener', 'Gemcutter', 'Guide',
+        'Herder', 'Historian', 'Hunter', 'Leatherworker', 'Lip Reader', 'Lumberjack',
+        'Miller', 'Miner', 'Musician', 'Naturalist/Survivalist', 'Painter', 'Potter',
+        'Rancher', 'Sculptor', 'Shipbuilder', 'Stablehand', 'Stonemason',
+        'Street Performer (Actor, Dancer, Singer, etc)', 'Tanner', 'Taxidermist',
+        'Weaponsmith', 'Weaver', 'Writer'
+    ]
     def __init__(self, parent, character_data, type_callback=None, gear_die_tab=None):
         self.parent = parent
         self.character_data = character_data
@@ -26,8 +38,8 @@ class BasicInfoTab:
         self.MAGIC_ITEMS = MAGIC_ITEMS
         # Guard for preventing duplicate custom item dialogs
         self._custom_item_dialog = None
-        # Track whether current HP has been initialized from max HP
-        self._hp_initialized = False
+        # Guard for preventing duplicate custom profession dialog
+        self._custom_profession_dialog = None
         self.create_tab()
         
     def on_magic_item_selected(self, event=None):
@@ -119,10 +131,16 @@ class BasicInfoTab:
         # Add trace to monitor race changes
         self.race_var.trace_add('write', lambda *args: self.on_race_change())
 
-        # Profession Selection
+        # Profession Selection (dropdown with custom option)
         ttk.Label(frame, text="Profession:").grid(row=3, column=0, padx=5, pady=2)
-        self.profession_entry = ttk.Entry(frame)
-        self.profession_entry.grid(row=3, column=1, padx=5, pady=2)
+        self.profession_var = tk.StringVar()
+        # Sort the profession options alphabetically (case-insensitive), custom option stays on top
+        prof_values = [self.CUSTOM_PROFESSION_LABEL] + sorted(self.PROFESSION_OPTIONS, key=str.lower)
+        # Compute a width that fits the longest entry (characters), with small padding
+        prof_width = max((len(v) for v in prof_values), default=20) + 2
+        self.profession_combo = ttk.Combobox(frame, textvariable=self.profession_var, state='readonly', values=prof_values, width=prof_width)
+        self.profession_combo.grid(row=3, column=1, padx=5, pady=2)
+        self.profession_combo.bind('<<ComboboxSelected>>', self.on_profession_selected)
 
         # Character Type/Specialization Selection
         ttk.Label(frame, text="Specialization:").grid(row=4, column=0, padx=5, pady=2)
@@ -258,13 +276,14 @@ class BasicInfoTab:
         hp_ctrl = ttk.Frame(combat_frame)
         hp_ctrl.grid(row=0, column=1, padx=5, pady=2, sticky='w')
         self.current_hp_var = tk.IntVar(value=0)
-        self.hp_step_var = tk.IntVar(value=1)
+        # Default HP step to 0 (treated as 1 when applied)
+        self.hp_step_var = tk.IntVar(value=0)
         # Non-editable current HP display placed before controls
         self.current_hp_label = ttk.Label(hp_ctrl, textvariable=self.current_hp_var, width=6, anchor='e')
         self.current_hp_label.pack(side='left', padx=(0, 6))
         # Buttons and step entry to modify current HP
         ttk.Button(hp_ctrl, text="-", width=2,
-                   command=lambda: self._inc_var(self.current_hp_var, -self._get_step(self.hp_step_var))).pack(side='left')
+                   command=lambda: self._apply_step_and_reset(self.current_hp_var, self.hp_step_var, -1)).pack(side='left')
         self.hp_step_entry = ttk.Entry(
             hp_ctrl,
             textvariable=self.hp_step_var,
@@ -274,7 +293,7 @@ class BasicInfoTab:
         )
         self.hp_step_entry.pack(side='left', padx=3)
         ttk.Button(hp_ctrl, text="+", width=2,
-                   command=lambda: self._inc_var(self.current_hp_var, +self._get_step(self.hp_step_var))).pack(side='left')
+                   command=lambda: self._apply_step_and_reset(self.current_hp_var, self.hp_step_var, +1)).pack(side='left')
 
         ttk.Label(combat_frame, text="/").grid(row=0, column=2, padx=5, pady=2)
         ttk.Label(combat_frame, text="Max HP:").grid(row=0, column=3, padx=5, pady=2)
@@ -321,18 +340,13 @@ class BasicInfoTab:
         money_ctrl = ttk.Frame(resources_frame)
         money_ctrl.grid(row=0, column=1, padx=5, pady=2, sticky='w')
         self.money_var = tk.IntVar(value=0)
-        self.money_entry = ttk.Entry(
-            money_ctrl,
-            textvariable=self.money_var,
-            width=8,
-            validate='key',
-            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
-        )
-        self.money_entry.pack(side='left', padx=(0, 6))
-        # Step controls for add/subtract
-        self.money_step_var = tk.IntVar(value=1)
+        # Non-editable display for current Money value
+        self.money_label = ttk.Label(money_ctrl, textvariable=self.money_var, width=8, anchor='e')
+        self.money_label.pack(side='left', padx=(0, 6))
+        # Step controls for add/subtract (default visually 0 and reset after use)
+        self.money_step_var = tk.IntVar(value=0)
         ttk.Button(money_ctrl, text="-", width=2,
-                   command=lambda: self._inc_var(self.money_var, -self._get_step(self.money_step_var))).pack(side='left')
+                   command=lambda: self._apply_step_and_reset(self.money_var, self.money_step_var, -1)).pack(side='left')
         self.money_step_entry = ttk.Entry(
             money_ctrl,
             textvariable=self.money_step_var,
@@ -342,24 +356,19 @@ class BasicInfoTab:
         )
         self.money_step_entry.pack(side='left', padx=3)
         ttk.Button(money_ctrl, text="+", width=2,
-                   command=lambda: self._inc_var(self.money_var, +self._get_step(self.money_step_var))).pack(side='left')
+                   command=lambda: self._apply_step_and_reset(self.money_var, self.money_step_var, +1)).pack(side='left')
 
         ttk.Label(resources_frame, text="Magic Dust:").grid(row=1, column=0, padx=5, pady=2)
         dust_ctrl = ttk.Frame(resources_frame)
         dust_ctrl.grid(row=1, column=1, padx=5, pady=2, sticky='w')
         self.magic_dust_var = tk.IntVar(value=0)
-        self.magic_dust_entry = ttk.Entry(
-            dust_ctrl,
-            textvariable=self.magic_dust_var,
-            width=8,
-            validate='key',
-            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
-        )
-        self.magic_dust_entry.pack(side='left', padx=(0, 6))
-        # Step controls for add/subtract
-        self.magic_dust_step_var = tk.IntVar(value=1)
+        # Non-editable display for current Magic Dust value
+        self.magic_dust_label = ttk.Label(dust_ctrl, textvariable=self.magic_dust_var, width=8, anchor='e')
+        self.magic_dust_label.pack(side='left', padx=(0, 6))
+        # Step controls for add/subtract (default visually 0 and reset after use)
+        self.magic_dust_step_var = tk.IntVar(value=0)
         ttk.Button(dust_ctrl, text="-", width=2,
-                   command=lambda: self._inc_var(self.magic_dust_var, -self._get_step(self.magic_dust_step_var))).pack(side='left')
+                   command=lambda: self._apply_step_and_reset(self.magic_dust_var, self.magic_dust_step_var, -1)).pack(side='left')
         self.magic_dust_step_entry = ttk.Entry(
             dust_ctrl,
             textvariable=self.magic_dust_step_var,
@@ -369,7 +378,7 @@ class BasicInfoTab:
         )
         self.magic_dust_step_entry.pack(side='left', padx=3)
         ttk.Button(dust_ctrl, text="+", width=2,
-                   command=lambda: self._inc_var(self.magic_dust_var, +self._get_step(self.magic_dust_step_var))).pack(side='left')
+                   command=lambda: self._apply_step_and_reset(self.magic_dust_var, self.magic_dust_step_var, +1)).pack(side='left')
 
         # Initialize initiative display
         self.update_initiative_display()
@@ -523,7 +532,7 @@ class BasicInfoTab:
             'name': self.name_entry.get(),
             'playerName': self.player_name_entry.get(),
             'race': self.race_var.get(),
-            'profession': self.profession_entry.get(),
+            'profession': self.profession_var.get(),
             'type': self.type_var.get(),
             'unarmedCombat': self.unarmed_combat_var.get(),
             'rank': int(self.rank_var.get()),
@@ -552,8 +561,22 @@ class BasicInfoTab:
         
         self.race_var.set(data.get('race', ''))
         
-        self.profession_entry.delete(0, tk.END)
-        self.profession_entry.insert(0, data.get('profession', ''))
+        # Profession: set var, and add to values if not present (keep list alphabetically sorted)
+        saved_prof = data.get('profession', '')
+        current_vals = list(self.profession_combo['values']) if hasattr(self, 'profession_combo') else []
+        if saved_prof:
+            base = [v for v in current_vals if v and v != self.CUSTOM_PROFESSION_LABEL]
+            if saved_prof not in base:
+                base.append(saved_prof)
+            new_vals = [self.CUSTOM_PROFESSION_LABEL] + sorted(base, key=str.lower)
+            self.profession_combo['values'] = new_vals
+            # Recompute width to accommodate any longer custom value
+            try:
+                new_width = max((len(v) for v in new_vals), default=20) + 2
+                self.profession_combo.config(width=new_width)
+            except Exception:
+                pass
+        self.profession_var.set(saved_prof)
         
         self.type_var.set(data.get('type', 'Non-Specialized'))
         
@@ -636,7 +659,7 @@ class BasicInfoTab:
             self.name_entry.config(state='disabled')
             self.player_name_entry.config(state='disabled')
             self.race_combo.config(state='disabled')
-            self.profession_entry.config(state='disabled')
+            self.profession_combo.config(state='disabled')
             self.type_combo.config(state='disabled')
             self.unarmed_combat_check.config(state='disabled')
         except Exception as e:
@@ -648,11 +671,12 @@ class BasicInfoTab:
             self.name_entry.config(state='normal')
             self.player_name_entry.config(state='normal')
             self.race_combo.config(state='readonly')
-            self.profession_entry.config(state='normal')
+            self.profession_combo.config(state='readonly')
+            self.profession_combo.configure(state='readonly')
             self.type_combo.config(state='readonly')
             self.unarmed_combat_check.config(state='normal')
         except Exception as e:
-            print(f"Error unlocking fields: {e}") 
+            print(f"Error unlocking fields: {e}")
 
     def calculate_indoor_speed(self):
         """Calculate indoor speed based on unarmed combat and rank"""
@@ -792,6 +816,87 @@ class BasicInfoTab:
         ttk.Button(button_frame, text='Cancel', command=close_dialog).pack(side='left', padx=5)
         dialog.protocol("WM_DELETE_WINDOW", close_dialog)
         name_entry.focus_set()
+
+    def on_profession_selected(self, event=None):
+        """Handle profession selection; open custom dialog if needed."""
+        choice = self.profession_var.get()
+        if choice == self.CUSTOM_PROFESSION_LABEL:
+            self.open_custom_profession_dialog()
+
+    def open_custom_profession_dialog(self):
+        # Prevent duplicates
+        try:
+            if self._custom_profession_dialog is not None and self._custom_profession_dialog.winfo_exists():
+                self._custom_profession_dialog.lift()
+                self._custom_profession_dialog.focus_set()
+                return
+        except Exception:
+            self._custom_profession_dialog = None
+        dialog = tk.Toplevel(self.tab)
+        self._custom_profession_dialog = dialog
+        dialog.title('Add Custom Profession')
+        dialog.transient(self.tab)
+        dialog.grab_set()
+
+        ttk.Label(dialog, text='Profession Name:').grid(row=0, column=0, padx=8, pady=8, sticky='e')
+        name_var = tk.StringVar()
+        name_entry = ttk.Entry(dialog, textvariable=name_var, width=32)
+        name_entry.grid(row=0, column=1, padx=8, pady=8, sticky='w')
+
+        btns = ttk.Frame(dialog)
+        btns.grid(row=1, column=0, columnspan=2, pady=8)
+
+        def close_dialog():
+            try:
+                dialog.destroy()
+            except Exception:
+                pass
+            finally:
+                self._custom_profession_dialog = None
+
+        def confirm():
+            raw = name_var.get().strip()
+            name = self.sanitize_item_name(raw)
+            if not name:
+                close_dialog()
+                return
+            # Add to combobox values keeping alphabetical order (case-insensitive)
+            current_vals = list(self.profession_combo['values'])
+            base = [v for v in current_vals if v and v != self.CUSTOM_PROFESSION_LABEL]
+            if name not in base:
+                base.append(name)
+            new_vals = [self.CUSTOM_PROFESSION_LABEL] + sorted(base, key=str.lower)
+            self.profession_combo['values'] = new_vals
+            # Recompute width to accommodate potentially longer custom value
+            try:
+                new_width = max((len(v) for v in new_vals), default=20) + 2
+                self.profession_combo.config(width=new_width)
+            except Exception:
+                pass
+            self.profession_var.set(name)
+            close_dialog()
+
+        ttk.Button(btns, text='Add', command=confirm).pack(side='left', padx=6)
+        ttk.Button(btns, text='Cancel', command=close_dialog).pack(side='left', padx=6)
+        dialog.protocol("WM_DELETE_WINDOW", close_dialog)
+        name_entry.focus_set()
+
+    def refresh_magic_items_listbox(self):
+        """Refresh listbox display of selected magic items."""
+        if not hasattr(self, 'magic_items_listbox'):
+            return
+        self.magic_items_listbox.delete(0, tk.END)
+        for item in self.selected_magic_items:
+            parts = [item.get('name', '')]
+            if item.get('variant'):
+                parts.append(f"({item['variant']})")
+            if 'current_charges' in item and 'max_charges' in item:
+                parts.append(f"Charges {item['current_charges']}/{item['max_charges']}")
+            elif 'charges_note' in item:
+                parts.append(item['charges_note'])
+            display = ' - '.join([p for p in parts if p])
+            self.magic_items_listbox.insert(tk.END, display)
+        self.update_use_charge_state()
 
     # --- Missing methods re-added ---
     def update_use_charge_state(self, event=None):
@@ -935,23 +1040,6 @@ class BasicInfoTab:
             self.magic_items_listbox.event_generate('<<ListboxSelect>>')
         self.update_use_charge_state()
 
-    def refresh_magic_items_listbox(self):
-        """Refresh listbox display of selected magic items."""
-        if not hasattr(self, 'magic_items_listbox'):
-            return
-        self.magic_items_listbox.delete(0, tk.END)
-        for item in self.selected_magic_items:
-            parts = [item.get('name', '')]
-            if item.get('variant'):
-                parts.append(f"({item['variant']})")
-            if 'current_charges' in item and 'max_charges' in item:
-                parts.append(f"Charges {item['current_charges']}/{item['max_charges']}")
-            elif 'charges_note' in item:
-                parts.append(item['charges_note'])
-            display = ' - '.join([p for p in parts if p])
-            self.magic_items_listbox.insert(tk.END, display)
-        self.update_use_charge_state()
-
     # --- Helpers for integer fields ---
     def _validate_nonnegative_int(self, proposed: str) -> bool:
         """Allow only empty or non-negative integers in entries."""
@@ -981,3 +1069,12 @@ class BasicInfoTab:
                 var.set(int(new_val))
             except Exception:
                 pass
+
+    def _apply_step_and_reset(self, target_var: tk.Variable, step_var: tk.Variable, sign: int = 1, min_value: int = 0):
+        """Apply +/- using step_var (0/empty treated as 1), then reset step_var to 0."""
+        delta = sign * self._get_step(step_var)
+        self._inc_var(target_var, delta, min_value=min_value)
+        try:
+            step_var.set(0)
+        except Exception:
+            pass
