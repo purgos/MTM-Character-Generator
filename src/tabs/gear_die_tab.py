@@ -514,32 +514,45 @@ class GearDieTab:
             if self.check_prerequisite(prerequisite, magic_aspect):
                 available_spells.append(spell_name)
         
+        # Sort alphabetically (case-insensitive)
+        available_spells = sorted(available_spells, key=lambda s: s.lower())
+        
         # Update dropdown
         widgets['spell_combo']['values'] = available_spells
         if available_spells:
-            widgets['spell_combo'].set(available_spells[0])
+            # Preserve existing selection if still valid; otherwise select first
+            current = widgets['spell_var'].get()
+            if current in available_spells:
+                widgets['spell_combo'].set(current)
+            else:
+                widgets['spell_combo'].set(available_spells[0])
             self.on_spell_selected(widgets, die, 0)  # slot_num not used in this context
         else:
             widgets['spell_combo'].set('')
             widgets['desc_label'].config(text="No spells available with current prerequisites")
     
     def check_prerequisite(self, prerequisite, magic_aspect):
-        """Check if character meets spell prerequisite"""
-        if not prerequisite or magic_aspect == 'NULL':
+        """Check if character meets spell prerequisite (Magic Aspect Dx)."""
+        # Magic must not be NULL
+        if str(magic_aspect).upper() == 'NULL':
             return False
         
-        # Parse prerequisite (e.g., "Magic Aspect D8")
-        if 'Magic Aspect' in prerequisite:
-            required_die = prerequisite.split()[-1]  # Get the die value (D8, D12, etc.)
+        # If no prerequisite listed, allow the spell
+        if not prerequisite:
+            return True
+        
+        text = str(prerequisite)
+        if 'magic aspect' in text.lower():
+            # Extract last token like D4/D6/D8/D10/D12
+            parts = text.strip().split()
+            required_die = parts[-1] if parts else ''
             die_values = {'d4': 1, 'd6': 2, 'd8': 3, 'd10': 4, 'd12': 5}
-            magic_die_values = {'d4': 1, 'd6': 2, 'd8': 3, 'd10': 4, 'd12': 5}
-            
-            required_level = die_values.get(required_die.lower(), 0)
-            magic_level = magic_die_values.get(magic_aspect.lower(), 0)
-            
+            required_level = die_values.get(str(required_die).lower(), 0)
+            magic_level = die_values.get(str(magic_aspect).lower(), 0)
             return magic_level >= required_level
         
-        return False
+        # If format is unrecognized, do not block the spell
+        return True
     
     def on_spell_selected(self, widgets, die, slot_num):
         """Handle spell selection"""
