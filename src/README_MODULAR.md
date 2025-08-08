@@ -1,215 +1,181 @@
 # MTM Character Sheet - Modular Version
 
-This is a refactored version of the MTM Character Sheet application that has been split into modular components for better maintainability and organization.
+This is the modular, tab-based MTM Character Sheet app. The UI is split into focused tabs, all sharing a single character_data dictionary for a clean, maintainable design.
 
 ## 📁 Project Structure
 
 ```
-mtm-character-sheet-python/
-├── src/
-│   ├── tabs/
-│   │   ├── __init__.py
-│   │   ├── basic_info_tab.py      # Character info and dice roller
-│   │   ├── aspects_tab.py         # Character aspects management
-│   │   ├── gear_die_tab.py        # Gear die slots
-│   │   ├── inventory_tab.py       # Inventory management
-│   │   └── abilities_tab.py       # Special abilities
-│   ├── character_sheet_modular.py # Main application
-│   └── MTM-Character-Generator-0.1.py # Original monolithic version
+MTM-Character-Generator/
 ├── requirements.txt
 ├── README.md
-└── README_MODULAR.md
+└── src/
+    ├── character_sheet_modular.py  # Main application (tabs notebook)
+    ├── README_MODULAR.md           # This file
+    ├── DAMAGE TABLES.md            # Reference tables (doc only)
+    ├── spells.py                   # Reference data
+    ├── magic_items.py              # Reference data
+    ├── aspect_abilities.py         # Reference data
+    └── tabs/
+        ├── __init__.py
+        ├── basic_info_tab.py       # Character info & core settings
+        ├── aspects_tab.py          # Aspect dice (d4…d12), locks, increases
+        ├── gear_die_tab.py         # Gear die slots & allocations
+        ├── inventory_tab.py        # Inventory management
+        ├── abilities_tab.py        # Special abilities
+        ├── encyclopedia_tab.py     # Read-only rules/reference browser
+        └── dice_roller_tab.py      # Dice roller & saves (history)
 ```
 
 ## 🔧 Modular Architecture
 
 ### Main Application (`character_sheet_modular.py`)
-- **Purpose**: Main entry point and coordination
-- **Responsibilities**:
-  - Initialize the GUI window
-  - Create and manage the notebook with tabs
-  - Handle file operations (save/load)
-  - Coordinate data flow between tabs
-  - Generate PDF exports
+- Initializes the main window and the tabbed notebook
+- Wires tab-to-tab callbacks (rank updates, aspect changes, HP updates)
+- Manages save/load/lock/reset and PDF export (ReportLab)
+- Keeps a single source-of-truth `character_data` shared by all tabs
 
 ### Tab Modules (`tabs/`)
 
-#### 1. Basic Info Tab (`basic_info_tab.py`)
-- **Purpose**: Character basic information and dice rolling
-- **Features**:
-  - Character name, player name, race, profession
-  - Rank and rank points management
-  - Magic items tracking
-  - Combat statistics (HP, initiative, hero points)
-  - Resources (money, magic dust)
-  - Aspect modifiers for dice rolls
+1) Basic Info Tab (`basic_info_tab.py`)
+- Names, race, profession, specialization (type), Unarmed Combat toggle
+- Rank and rank point tracking (drives slot/aspect availability)
+- Combat stats (HP, initiative, speeds, hero points) and resources
+- Exposes variables/callbacks used by other tabs
 
-#### 2. Aspects Tab (`aspects_tab.py`)
-- **Purpose**: Character aspect management
-- **Features**:
-  - Four aspects: Melee, Ranged, Rogue, Magic
-  - Die type assignment (d4, d6, d8, d10, d12)
-  - Modifier calculations
-  - Aspect locking system
-  - Increase/decrease die value buttons
+2) Aspects Tab (`aspects_tab.py`)
+- Four aspects: Melee, Ranged, Rogue, Magic
+- Die assignment (d4, d6, d8, d10, d12) with computed modifiers
+- Locking/unlocking based on specialization choices
+- Tracks level-one D12 selection and available die increases by rank
+- Applies Unarmed Combat effects when relevant
 
-#### 3. Gear Die Tab (`gear_die_tab.py`)
-- **Purpose**: Gear die slot management
-- **Features**:
-  - Dynamic slot allocation based on rank
-  - Text entries for each gear die slot
-  - Rank-based slot increases
-  - Automatic slot recalculation
+3) Gear Die Tab (`gear_die_tab.py`)
+- Rank-driven gear slot counts and allocation widgets
+- Syncs slot changes and can lock allocations (HP/Dodge/Parry, etc.)
+- Notifies Basic Info tab to refresh Max HP display
 
-#### 4. Inventory Tab (`inventory_tab.py`)
-- **Purpose**: Comprehensive inventory management
-- **Features**:
-  - Four inventory categories: Stored, Magic, Stored Magic, Elsewhere
-  - Add/remove items with quantities
-  - Location tracking for "elsewhere" items
-  - Quantity adjustment controls
-  - Edit location functionality
+4) Inventory Tab (`inventory_tab.py`)
+- Four categories: Stored, Magic, Stored Magic, Elsewhere
+- Add/remove/edit with quantities and location tracking
 
-#### 5. Abilities Tab (`abilities_tab.py`)
-- **Purpose**: Special abilities management
-- **Features**:
-  - Rank-based ability visibility
-  - Dragon's Breath ability (Half-Dragon race)
-  - Dynamic ability scaling with rank
-  - Text areas for custom abilities
+5) Abilities Tab (`abilities_tab.py`)
+- Rank-based ability visibility/availability
+- Dropdown reacts to which aspect is D12 at level one
+- Space for custom/special abilities (e.g., race-based)
+
+6) Encyclopedia Tab (`encyclopedia_tab.py`)
+- In-app reference for spells, magic items, aspect abilities, and damage tables
+- Read-only documentation; not read by the dice roller for calculations
+
+7) Dice Roller Tab (`dice_roller_tab.py`)
+- General dice rolls (die, count, modifier) with advantage/disadvantage
+- Quick-roll buttons for aspects; skill checks with profession bonus
+- Armor/Dodge saves (melee table), Magic save (spells table)
+- Damage helper (normal/critical), result history with rich formatting
+- Uses character_data for aspects and relevant bonuses
 
 ## 🚀 Benefits of Modular Design
 
-### 1. **Maintainability**
-- Each tab is self-contained and easier to modify
-- Clear separation of concerns
-- Reduced code complexity
-
-### 2. **Reusability**
-- Tab modules can be reused in other applications
-- Easy to add new tabs or modify existing ones
-- Consistent interface across all tabs
-
-### 3. **Testing**
-- Individual tabs can be tested in isolation
-- Easier to write unit tests for specific functionality
-- Better error isolation
-
-### 4. **Development**
-- Multiple developers can work on different tabs simultaneously
-- Reduced merge conflicts
-- Clearer code ownership
+- Maintainable: each feature area is in its own file
+- Reusable: easy to extend or swap tabs
+- Testable: units can be exercised in isolation
+- Parallel-friendly: multiple contributors can work safely
 
 ## 🔄 Data Flow
 
-### Character Data Structure
-All tabs share a common `character_data` dictionary that contains:
+All tabs read/write a shared `character_data` dictionary, e.g.:
+
 ```python
 {
-    'name': str,
-    'playerName': str,
-    'rank': int,
-    'rankPoints': int,
-    'race': str,
-    'profession': str,
-    'aspects': dict,
-    'gearDieSlots': dict,
-    'gearDieEntries': dict,
-    'combatStats': dict,
-    'resources': dict,
-    'magicItems': list,
-    'inventory': dict,
-    'specialAbilities': dict
+  'name': str,
+  'playerName': str,
+  'rank': int,
+  'rankPoints': int,
+  'race': str,
+  'profession': str,
+  'type': str,                 # specialization
+  'unarmedCombat': bool,
+  'aspects': {                 # e.g., {'melee': 'd6', ...}
+    'melee': str,
+    'ranged': str,
+    'rogue': str,
+    'magic': str
+  },
+  'aspectIncreases': {'allowed': int, 'used': int, 'history': dict},
+  'levelOneD12Aspect': str|None,
+  'gearDieSlots': dict,
+  'gearDieAllocations': dict,
+  'gearDieEntries': dict,
+  'combatStats': dict,
+  'resources': dict,
+  'magicItems': list,
+  'inventory': dict,
+  'specialAbilities': dict,
+  'selectedAbilities': list
 }
 ```
 
-### Tab Interface
-Each tab implements a consistent interface:
-- `get_data()`: Returns the tab's data as a dictionary
-- `set_data(data)`: Updates the tab with new data
-- `create_tab()`: Creates the tab's GUI elements
+Note on damage tables: `src/DAMAGE TABLES.md` documents outcomes; the dice roller uses logic in code and does not read the markdown at runtime.
 
 ## 🛠️ Usage
 
-### Running the Modular Version
+Install dependencies and run from the `src/` folder so relative imports work.
+
 ```bash
-cd mtm-character-sheet-python/src
-python character_sheet_modular.py
+pip install -r requirements.txt
+cd MTM-Character-Generator/src
+python3 character_sheet_modular.py
 ```
 
-### Running the Original Version
-```bash
-cd mtm-character-sheet-python/src
-python MTM-Character-Generator-0.1.py
-```
+PDF export uses ReportLab and writes to a user-chosen path via a file dialog.
 
 ## 📝 Adding New Tabs
 
-To add a new tab:
+1) Create `src/tabs/new_tab.py` with a class exposing a `.tab` Frame.
 
-1. Create a new file in `src/tabs/` (e.g., `new_tab.py`)
-2. Implement the tab class with the required interface:
-   ```python
-   class NewTab:
-       def __init__(self, parent, character_data):
-           self.parent = parent
-           self.character_data = character_data
-           self.tab = ttk.Frame(parent)
-           self.create_tab()
-       
-       def create_tab(self):
-           # Create GUI elements
-           pass
-       
-       def get_data(self):
-           # Return tab data
-           pass
-       
-       def set_data(self, data):
-           # Update tab with data
-           pass
-   ```
+```python
+class NewTab:
+    def __init__(self, parent, character_data):
+        self.parent = parent
+        self.character_data = character_data
+        self.tab = ttk.Frame(parent)
+        self._build_ui()
 
-3. Import and add the tab in `character_sheet_modular.py`:
-   ```python
-   from tabs.new_tab import NewTab
-   
-   # In create_notebook method:
-   self.new_tab = NewTab(self.notebook, self.character_data)
-   self.notebook.add(self.new_tab.tab, text="New Tab")
-   ```
+    def _build_ui(self):
+        # create UI widgets
+        pass
+```
 
-4. Update the `__init__.py` file in the tabs package
+2) Import and add it in `create_notebook` (in `character_sheet_modular.py`):
+
+```python
+from tabs.new_tab import NewTab
+
+self.new_tab = NewTab(self.notebook, self.character_data)
+self.notebook.add(self.new_tab.tab, text="New Tab")
+```
+
+3) Optionally export helper methods or callbacks if other tabs need to react.
 
 ## 🔧 Dependencies
 
-The modular version uses the same dependencies as the original:
-- `tkinter` (built-in)
-- `reportlab` (for PDF generation)
-- `json` (built-in)
+- tkinter (bundled with Python; on Linux you may need `python3-tk`)
+- reportlab (PDF export)
 
 ## 📋 Migration Notes
 
-- The modular version maintains full compatibility with the original
-- All functionality has been preserved
-- File formats (JSON save/load) are identical
-- PDF export functionality is maintained
+- Dice rolling is now in its own tab (`dice_roller_tab.py`), not in Basic Info
+- Two new tabs: Encyclopedia (reference) and Dice Roller (tools & history)
+- The damage tables markdown is documentation-only
 
 ## 🐛 Troubleshooting
 
-### Import Errors
-If you get import errors, make sure:
-1. You're running from the correct directory (`src/`)
-2. The `tabs/` directory contains `__init__.py`
-3. All tab modules are present
+Import errors
+- Run the app from `src/` so `tabs/` imports resolve
+- Ensure `tabs/__init__.py` exists (it does in this repo)
 
-### Missing Dependencies
-Install required packages:
-```bash
-pip install reportlab
-```
+Missing tkinter
+- Linux: `sudo apt install python3-tk`
 
-### GUI Issues
-- Ensure tkinter is available on your system
-- On Linux: `sudo apt install python3-tk`
-- On Windows: Usually included with Python installation 
+Missing Python packages
+- `pip install -r requirements.txt`
