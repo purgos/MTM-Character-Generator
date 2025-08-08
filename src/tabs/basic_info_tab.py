@@ -24,6 +24,8 @@ class BasicInfoTab:
         self.tab = ttk.Frame(parent)
         # Provide instance attribute for MAGIC_ITEMS
         self.MAGIC_ITEMS = MAGIC_ITEMS
+        # Guard for preventing duplicate custom item dialogs
+        self._custom_item_dialog = None
         self.create_tab()
         
     def on_magic_item_selected(self, event=None):
@@ -274,56 +276,124 @@ class BasicInfoTab:
         self.initiative_label = ttk.Label(combat_frame, text="+0")
         self.initiative_label.grid(row=2, column=1, padx=5, pady=2)
 
-        # Hero Points
+        # Hero Points (integer entry with +/-)
         ttk.Label(combat_frame, text="Hero Points:").grid(row=3, column=0, padx=5, pady=2)
-        self.hero_points_entry = ttk.Entry(combat_frame)
-        self.hero_points_entry.grid(row=3, column=1, padx=5, pady=2)
+        hp_ctrl = ttk.Frame(combat_frame)
+        hp_ctrl.grid(row=3, column=1, padx=5, pady=2, sticky='w')
+        self.hero_points_var = tk.IntVar(value=0)
+        ttk.Button(hp_ctrl, text="-", width=2, command=lambda: self._inc_var(self.hero_points_var, -1)).pack(side='left')
+        self.hero_points_entry = ttk.Entry(
+            hp_ctrl,
+            textvariable=self.hero_points_var,
+            width=6,
+            validate='key',
+            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
+        )
+        self.hero_points_entry.pack(side='left', padx=3)
+        ttk.Button(hp_ctrl, text="+", width=2, command=lambda: self._inc_var(self.hero_points_var, +1)).pack(side='left')
 
         # Resources
         resources_frame = ttk.LabelFrame(frame, text="Resources")
         resources_frame.grid(row=8, column=0, columnspan=2, padx=5, pady=5, sticky='ew')
 
         ttk.Label(resources_frame, text="Money:").grid(row=0, column=0, padx=5, pady=2)
-        self.money_entry = ttk.Entry(resources_frame)
-        self.money_entry.grid(row=0, column=1, padx=5, pady=2)
+        money_ctrl = ttk.Frame(resources_frame)
+        money_ctrl.grid(row=0, column=1, padx=5, pady=2, sticky='w')
+        self.money_var = tk.IntVar(value=0)
+        self.money_entry = ttk.Entry(
+            money_ctrl,
+            textvariable=self.money_var,
+            width=8,
+            validate='key',
+            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
+        )
+        self.money_entry.pack(side='left', padx=(0, 6))
+        # Step controls for add/subtract
+        self.money_step_var = tk.IntVar(value=1)
+        ttk.Button(money_ctrl, text="-", width=2,
+                   command=lambda: self._inc_var(self.money_var, -self._get_step(self.money_step_var))).pack(side='left')
+        self.money_step_entry = ttk.Entry(
+            money_ctrl,
+            textvariable=self.money_step_var,
+            width=6,
+            validate='key',
+            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
+        )
+        self.money_step_entry.pack(side='left', padx=3)
+        ttk.Button(money_ctrl, text="+", width=2,
+                   command=lambda: self._inc_var(self.money_var, +self._get_step(self.money_step_var))).pack(side='left')
 
         ttk.Label(resources_frame, text="Magic Dust:").grid(row=1, column=0, padx=5, pady=2)
-        self.magic_dust_entry = ttk.Entry(resources_frame)
-        self.magic_dust_entry.grid(row=1, column=1, padx=5, pady=2)
+        dust_ctrl = ttk.Frame(resources_frame)
+        dust_ctrl.grid(row=1, column=1, padx=5, pady=2, sticky='w')
+        self.magic_dust_var = tk.IntVar(value=0)
+        self.magic_dust_entry = ttk.Entry(
+            dust_ctrl,
+            textvariable=self.magic_dust_var,
+            width=8,
+            validate='key',
+            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
+        )
+        self.magic_dust_entry.pack(side='left', padx=(0, 6))
+        # Step controls for add/subtract
+        self.magic_dust_step_var = tk.IntVar(value=1)
+        ttk.Button(dust_ctrl, text="-", width=2,
+                   command=lambda: self._inc_var(self.magic_dust_var, -self._get_step(self.magic_dust_step_var))).pack(side='left')
+        self.magic_dust_step_entry = ttk.Entry(
+            dust_ctrl,
+            textvariable=self.magic_dust_step_var,
+            width=6,
+            validate='key',
+            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
+        )
+        self.magic_dust_step_entry.pack(side='left', padx=3)
+        ttk.Button(dust_ctrl, text="+", width=2,
+                   command=lambda: self._inc_var(self.magic_dust_var, +self._get_step(self.magic_dust_step_var))).pack(side='left')
 
         # Initialize initiative display
         self.update_initiative_display()
 
     def calculate_max_hp(self):
-        """Calculate max HP based on race, rank, and gear die allocations"""
-        base_hp = 20
-        rank = int(self.rank_var.get())
-        
-        # Race HP modifiers
-        race_hp_modifiers = {
-            'Half-Dragon': 10,
-            'Human': 0,
-            'Elf': -5,
-            'Half Elf': -2,
-            'Galdur': 5,
-            'Gnome': -10,
-            'Halfling': -10,
-            'Dwarf': 5,
-            'Minotaur': 15,
-            'Half Giant': 20
-        }
-        
-        race_modifier = race_hp_modifiers.get(self.race_var.get(), 0)
-        rank_hp = rank * 5
-        
-        # Calculate base max HP
-        max_hp = base_hp + race_modifier + rank_hp
-        
+        """Calculate max HP based on race, rank, and gear die allocations.
+        New base HP formulas by race:
+        - Human / Half-Dragon: 11 + 7 * rank
+        - Elf / Half Elf / Galdur / Gnome / Halfling: 10 + 5 * rank
+        - Dwarf / Minotaur: 12 + 8 * rank
+        - Half Giant: 15 + 10 * rank
+        """
+        try:
+            rank = int(self.rank_var.get())
+        except Exception:
+            rank = 1
+        race = (self.race_var.get() or '').strip()
+        race_key = race.lower()
+
+        group_a = {"human", "half-dragon"}
+        group_b = {"elf", "half elf", "galdur", "gnome", "halfling"}
+        group_c = {"dwarf", "minotaur"}
+        group_d = {"half giant"}
+
+        if race_key in group_a:
+            base_hp = 11 + 7 * rank
+        elif race_key in group_b:
+            base_hp = 10 + 5 * rank
+        elif race_key in group_c:
+            base_hp = 12 + 8 * rank
+        elif race_key in group_d:
+            base_hp = 15 + 10 * rank
+        else:
+            # Sensible default if race isn't selected or unrecognized
+            base_hp = 10 + 5 * rank
+
+        max_hp = base_hp
+
         # Add gear die hitpoints if gear die tab is available
-        if self.gear_die_tab:
-            gear_die_hp = self.gear_die_tab.calculate_gear_die_hitpoints()
-            max_hp += gear_die_hp
-        
+        if hasattr(self, 'gear_die_tab') and self.gear_die_tab:
+            try:
+                gear_die_hp = self.gear_die_tab.calculate_gear_die_hitpoints()
+                max_hp += gear_die_hp
+            except Exception:
+                pass
         return max_hp
 
     def update_rank(self, *args):
@@ -420,11 +490,11 @@ class BasicInfoTab:
                 'maxHp': int(self.max_hp_entry.get() or 0),
                 'indoorSpeed': indoor_speed,
                 'initiative': self.calculate_initiative(),
-                'heroPoints': int(self.hero_points_entry.get() or 0)
+                'heroPoints': self._get_int(self.hero_points_var)
             },
             'resources': {
-                'money': int(self.money_entry.get() or 0),
-                'magicDust': int(self.magic_dust_entry.get() or 0)
+                'money': self._get_int(self.money_var),
+                'magicDust': self._get_int(self.magic_dust_var)
             }
         }
 
@@ -484,16 +554,22 @@ class BasicInfoTab:
         # Initiative is calculated automatically, so we just update the display
         self.update_initiative_display()
         
-        self.hero_points_entry.delete(0, tk.END)
-        self.hero_points_entry.insert(0, str(combat_stats.get('heroPoints', 0)))
+        # Hero Points via IntVar
+        try:
+            self.hero_points_var.set(int(combat_stats.get('heroPoints', 0)))
+        except Exception:
+            self.hero_points_var.set(0)
         
-        # Set resources
+        # Set resources via IntVars
         resources = data.get('resources', {})
-        self.money_entry.delete(0, tk.END)
-        self.money_entry.insert(0, str(resources.get('money', 0)))
-        
-        self.magic_dust_entry.delete(0, tk.END)
-        self.magic_dust_entry.insert(0, str(resources.get('magicDust', 0))) 
+        try:
+            self.money_var.set(int(resources.get('money', 0)))
+        except Exception:
+            self.money_var.set(0)
+        try:
+            self.magic_dust_var.set(int(resources.get('magicDust', 0)))
+        except Exception:
+            self.magic_dust_var.set(0)
 
     def lock_fields(self):
         """Disable editing of key character info fields."""
@@ -581,7 +657,16 @@ class BasicInfoTab:
         self.magic_item_description_text.config(state='disabled')
 
     def open_custom_item_dialog(self):
+        # If a dialog is already open, just focus it
+        try:
+            if self._custom_item_dialog is not None and self._custom_item_dialog.winfo_exists():
+                self._custom_item_dialog.lift()
+                self._custom_item_dialog.focus_set()
+                return
+        except Exception:
+            self._custom_item_dialog = None
         dialog = tk.Toplevel(self.tab)
+        self._custom_item_dialog = dialog
         dialog.title('Create Custom Magic Item')
         dialog.transient(self.tab)
         dialog.grab_set()
@@ -603,14 +688,20 @@ class BasicInfoTab:
         button_frame = ttk.Frame(dialog)
         button_frame.grid(row=3, column=0, columnspan=2, pady=10)
 
+        def close_dialog():
+            try:
+                dialog.destroy()
+            finally:
+                self._custom_item_dialog = None
+
         def confirm():
             name = self.sanitize_item_name(name_var.get().strip())
             if not name:
-                dialog.destroy()
+                close_dialog()
                 return
             if name in self.magic_item_lookup:
                 # Prevent overwriting existing items
-                dialog.destroy()
+                close_dialog()
                 return
             description = self.sanitize_text(desc_text.get('1.0', tk.END).strip())
             charges_input = charges_var.get().strip()
@@ -622,11 +713,9 @@ class BasicInfoTab:
                 except ValueError:
                     pass
             self.magic_item_lookup[name] = item_def
-            # Update combobox values
+            # Update combobox values keeping custom label at top
             current_vals = list(self.magic_item_combo['values'])
             if name not in current_vals:
-                current_vals.append(name)
-                # Keep custom label at top, sort rest
                 base = [v for v in current_vals if v not in (self.CUSTOM_ITEM_LABEL, name) and v]
                 self.magic_item_combo['values'] = [self.CUSTOM_ITEM_LABEL] + sorted(base + [name])
             self.magic_item_var.set(name)
@@ -638,10 +727,11 @@ class BasicInfoTab:
             self.variant_combo['values'] = []
             self.variant_var.set('')
             self.update_magic_item_description(item_def)
-            dialog.destroy()
+            close_dialog()
 
         ttk.Button(button_frame, text='Add Item', command=confirm).pack(side='left', padx=5)
-        ttk.Button(button_frame, text='Cancel', command=dialog.destroy).pack(side='left', padx=5)
+        ttk.Button(button_frame, text='Cancel', command=close_dialog).pack(side='left', padx=5)
+        dialog.protocol("WM_DELETE_WINDOW", close_dialog)
         name_entry.focus_set()
 
     # --- Missing methods re-added ---
@@ -802,3 +892,33 @@ class BasicInfoTab:
             display = ' - '.join([p for p in parts if p])
             self.magic_items_listbox.insert(tk.END, display)
         self.update_use_charge_state()
+
+    # --- Helpers for integer fields ---
+    def _validate_nonnegative_int(self, proposed: str) -> bool:
+        """Allow only empty or non-negative integers in entries."""
+        return proposed == '' or proposed.isdigit()
+
+    def _get_int(self, var: tk.Variable) -> int:
+        try:
+            return int(var.get())
+        except Exception:
+            return 0
+
+    def _get_step(self, var: tk.Variable) -> int:
+        """Return a positive step (defaults to 1 if empty/0)."""
+        step = self._get_int(var)
+        return step if step > 0 else 1
+
+    def _inc_var(self, var: tk.Variable, delta: int, min_value: int = 0):
+        current = self._get_int(var)
+        new_val = current + delta
+        if new_val < min_value:
+            new_val = min_value
+        try:
+            var.set(new_val)
+        except Exception:
+            # For safety if var is not an IntVar
+            try:
+                var.set(int(new_val))
+            except Exception:
+                pass

@@ -318,6 +318,22 @@ class CharacterSheetGUI:
         """Show popup for Specialized Caster to choose which warrior aspect to lose"""
         from tkinter import messagebox
         
+        # If loading a character or already decided, skip dialog and enforce saved state
+        aspects = self.character_data.get('aspects', {})
+        melee_null = aspects.get('melee') == 'NULL'
+        ranged_null = aspects.get('ranged') == 'NULL'
+        if (melee_null and not ranged_null) or (ranged_null and not melee_null):
+            # Respect saved choice and lock that aspect, ensure the other is unlocked
+            self.aspects_tab.set_aspect_value('melee', aspects.get('melee', 'd4'))
+            self.aspects_tab.set_aspect_value('ranged', aspects.get('ranged', 'd4'))
+            if melee_null:
+                self.aspects_tab.lock_aspect('melee')
+                self.aspects_tab.unlock_aspect('ranged')
+            else:
+                self.aspects_tab.lock_aspect('ranged')
+                self.aspects_tab.unlock_aspect('melee')
+            return
+        
         # Create a custom dialog
         dialog = tk.Toplevel(self.root)
         dialog.title("Specialized Caster Choice")
