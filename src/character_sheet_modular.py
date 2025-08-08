@@ -192,6 +192,17 @@ class CharacterSheetGUI:
             # Update aspect die increases for the new rank
             self.update_aspect_die_increases()
             
+            # Refresh dodge and parry descriptions to reflect new rank-based effects
+            if hasattr(self.gear_die_tab, 'allocation_widgets'):
+                for die in self.gear_die_tab.allocation_widgets:
+                    for slot_widgets in self.gear_die_tab.allocation_widgets[die]:
+                        if slot_widgets['allocation_var'].get() in ('dodge', 'parry'):
+                            self.gear_die_tab.on_allocation_type_change(
+                                slot_widgets,
+                                slot_widgets.get('die', die),
+                                slot_widgets.get('slot_num', 0)
+                            )
+            
         except ValueError as e:
             print(f"Error in on_rank_update: {e}")
             pass

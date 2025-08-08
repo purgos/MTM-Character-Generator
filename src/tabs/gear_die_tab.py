@@ -155,10 +155,14 @@ class GearDieTab:
                                       state='readonly', width=10)
         allocation_combo.pack(side='left', padx=2)
         
-        # Value entry (for melee/ranged/shield/armor/dodge/parry) - larger
+        # Value entry (for types that need a small number/text) - larger
         value_var = tk.StringVar()
         value_entry = ttk.Entry(controls_frame, textvariable=value_var, width=40)
         value_entry.pack(side='left', padx=2)
+        
+        # Weapon description prompt label (for melee/ranged/unarmed)
+        weapon_label = ttk.Label(controls_frame, text="Enter Weapon description")
+        weapon_label.pack_forget()
         
         # Spell dropdown (initially hidden) - larger
         spell_var = tk.StringVar()
@@ -174,12 +178,18 @@ class GearDieTab:
         desc_label = ttk.Label(desc_frame, text="", wraplength=800, font=('Arial', 9), justify='left')
         desc_label.pack(fill='x', padx=10, pady=2)
         
+        # Large text box for weapon description (replaces desc_label for melee/ranged/unarmed)
+        weapon_text = tk.Text(desc_frame, height=6, wrap='word')
+        weapon_text.pack_forget()
+        
         # Store widget references
         widgets = {
             'allocation_var': allocation_var,
             'allocation_combo': allocation_combo,
             'value_var': value_var,
             'value_entry': value_entry,
+            'weapon_label': weapon_label,
+            'weapon_text': weapon_text,
             'spell_var': spell_var,
             'spell_combo': spell_combo,
             'desc_label': desc_label,
@@ -261,7 +271,6 @@ class GearDieTab:
         if allocation_type == 'parry' and not self.character_data.get('unarmedCombat', False):
             messagebox.showwarning("Unarmed Combat Required", 
                                  "Parry is only available when Unarmed Combat is selected.")
-            # Reset to hitpoints
             widgets['allocation_var'].set('hitpoints')
             allocation_type = 'hitpoints'
         
@@ -269,7 +278,6 @@ class GearDieTab:
         if allocation_type == 'unarmed' and not self.character_data.get('unarmedCombat', False):
             messagebox.showwarning("Unarmed Combat Required", 
                                  "Unarmed is only available when Unarmed Combat is selected.")
-            # Reset to hitpoints
             widgets['allocation_var'].set('hitpoints')
             allocation_type = 'hitpoints'
         
@@ -279,68 +287,107 @@ class GearDieTab:
             widgets['allocation_var'].set('hitpoints')
             allocation_type = 'hitpoints'
         
-        # Hide/show appropriate widgets
+        # Reset visibility defaults
+        widgets['value_entry'].pack_forget()
+        widgets['weapon_label'].pack_forget()
+        widgets['spell_combo'].pack_forget()
+        widgets['desc_label'].pack_forget()
+        widgets['weapon_text'].pack_forget()
+        
+        # Show appropriate widgets
         if allocation_type == 'spell':
-            widgets['value_entry'].pack_forget()
             widgets['spell_combo'].pack(side='left', padx=2)
             self.update_spell_dropdown(widgets, die)
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text="Select a spell to see its details")
+        elif allocation_type == 'hitpoints':
+            widgets['value_entry'].pack(side='left', padx=2)
+            # Set hitpoints value based on die
+            hp_values = {'d4': 2, 'd6': 3, 'd8': 4, 'd10': 5, 'd12': 6}
+            widgets['value_var'].set(str(hp_values[die]))
+            widgets['value_entry'].config(state='readonly')
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=f"Adds {hp_values[die]} hitpoints")
+        elif allocation_type == 'shield':
+            shield_text = (
+                "Shields are a special kind of armor. When combined with armor, a shield allows you to "
+                "force your opponent to make two damage rolls when damaging you in combat, taking the "
+                "lesser of the two results, however; the shield uses a D4 gear die slot. Shields may not "
+                "be used with missile fire or two-handed weapons."
+            )
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=shield_text)
+        elif allocation_type == 'tower shield':
+            tower_text = (
+                "Tower Shields provide an additional +1 armor value taking up the initial D4 slot. They also "
+                "force the person using it to move at half movement while carrying the shield. The shield can be planted/set as a "
+                "move action. If a creature is behind the cover of a tower shield, they can not be directly targeted by spells except "
+                "area of effect spells. They can be hit by spells if the attacker uses a hold or interrupt action, however. While under "
+                "cover of the shield, Warrior Melee attacks against the covered creature gets all normal shield bonuses as though "
+                "they were wielding it themselves."
+            )
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=tower_text)
+        elif allocation_type == 'armor':
+            # Armor category header depends on die
+            if die in ['d4', 'd6']:
+                armor_header = (
+                    "Light Armor + 0 (Padded Armor, Leather Armor, Studded Leather, Hide), "
+                    "limited to Gear Die D4 and D6"
+                )
+            elif die in ['d8', 'd10']:
+                armor_header = (
+                    "Medium Armor + 1 (Chain Shirt, Breastplate, Half-Plate), "
+                    "limited to Gear Die D8 and D10"
+                )
+            else:  # d12 and any higher defaults
+                armor_header = (
+                    "Heavy Armor +2 (Ring Mail, Chain Mail, Splint Mail, Full Plate), "
+                    "limited to Gear Die D12"
+                )
+            armor_text = (
+                "Armor reduces damage taken by a number from two twelve. Each melee or missile fire damage roll "
+                "to a character wearing armor is potentially reduced by two to twelve points. The affected character "
+                "will roll a D20 armor check against each attack and consult the chart above. Damage is always rounded down "
+                "for attacks against the PC’s and up for attacks against NPC’S/Monsters. Minimum damage is either 1 (or two "
+                "if a critical hit or three if Improved Critical)."
+            )
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=f"{armor_header}\n\n{armor_text}")
+        elif allocation_type == 'dodge':
+            rank = int(self.character_data.get('rank', 1) or 1)
+            current_bonus = min(5, max(0, rank // 2))
+            dodge_text = (
+                "Dodge Defense: Anytime you are hit with a melee or ranged weapon, you may make a Dodge check which is the same as an Armor check to determine effect. "
+                "A rank 2 UC Specialist adds +1 to all armor checks. This ability increases by one every other level to a maximum of +5."
+            )
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=f"{dodge_text}\n\nCurrent Bonus: +{current_bonus}")
+        elif allocation_type == 'parry':
+            rank = int(self.character_data.get('rank', 1) or 1)
+            parry_text = (
+                "Parry Defense: Any time you are hit with a melee or ranged weapon, if you have this ability the GM must make two damage rolls instead of one for each attack taking the lowest result as though you were employing a shield. "
+                "A rank six or better UC Specialist can make the GM roll three damage rolls instead of two for each attack taking the lowest result as though you were employing a magic shield."
+            )
+            current_effect = (
+                "Current Effect: 3 damage rolls (take lowest) [magic shield-like]" if rank >= 6
+                else "Current Effect: 2 damage rolls (take lowest) [shield-like]"
+            )
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=f"{parry_text}\n\n{current_effect}")
+        elif allocation_type in ('melee', 'ranged', 'unarmed'):
+            # Show the prompt label and large text box for weapon description
+            widgets['weapon_label'].pack(side='left', padx=6)
+            widgets['weapon_text'].pack(fill='x', padx=10, pady=2)
         else:
-            widgets['spell_combo'].pack_forget()
-            
-            if allocation_type == 'hitpoints':
-                # Ensure entry visible for hitpoints description
-                widgets['value_entry'].pack(side='left', padx=2)
-                # Set hitpoints value based on die
-                hp_values = {'d4': 2, 'd6': 3, 'd8': 4, 'd10': 5, 'd12': 6}
-                widgets['value_var'].set(str(hp_values[die]))
-                widgets['value_entry'].config(state='readonly')
-                widgets['desc_label'].config(text=f"Adds {hp_values[die]} hitpoints")
-            elif allocation_type == 'shield':
-                # For shield, hide the value entry and show fixed rules text
-                widgets['value_entry'].pack_forget()
-                widgets['value_var'].set('')
-                shield_text = (
-                    "Shields are a special kind of armor. When combined with armor, a shield allows you to "
-                    "force your opponent to make two damage rolls when damaging you in combat, taking the "
-                    "lesser of the two results, however; the shield uses a D4 gear die slot. Shields may not "
-                    "be used with missile fire or two-handed weapons."
-                )
-                widgets['desc_label'].config(text=shield_text)
-            elif allocation_type == 'armor':
-                # For armor, hide the value entry and show fixed rules text
-                widgets['value_entry'].pack_forget()
-                widgets['value_var'].set('')
-                # Armor category header depends on die
-                if die in ['d4', 'd6']:
-                    armor_header = (
-                        "Light Armor + 0 (Padded Armor, Leather Armor, Studded Leather, Hide), "
-                        "limited to Gear Die D4 and D6"
-                    )
-                elif die in ['d8', 'd10']:
-                    armor_header = (
-                        "Medium Armor + 1 (Chain Shirt, Breastplate, Half-Plate), "
-                        "limited to Gear Die D8 and D10"
-                    )
-                else:  # d12 and any higher defaults
-                    armor_header = (
-                        "Heavy Armor +2 (Ring Mail, Chain Mail, Splint Mail, Full Plate), "
-                        "limited to Gear Die D12"
-                    )
-                armor_text = (
-                    "Armor reduces damage taken by a number from two twelve. Each melee or missile fire damage roll "
-                    "to a character wearing armor is potentially reduced by two to twelve points. The affected character "
-                    "will roll a D20 armor check against each attack and consult the chart above. Damage is always rounded down "
-                    "for attacks against the PC’s and up for attacks against NPC’S/Monsters. Minimum damage is either 1 (or two "
-                    "if a critical hit or three if Improved Critical)."
-                )
-                widgets['desc_label'].config(text=f"{armor_header}\n\n{armor_text}")
-            else:  # melee, ranged, tower shield, dodge, parry, or unarmed
-                widgets['value_entry'].pack(side='left', padx=2)
-                widgets['value_entry'].config(state='normal')
-                widgets['value_var'].set('')
-                widgets['desc_label'].config(text=f"Enter {allocation_type} bonus value")
+            # Fallback: small entry and generic description prompt
+            widgets['value_entry'].config(state='normal')
+            widgets['value_var'].set('')
+            widgets['value_entry'].pack(side='left', padx=2)
+            widgets['desc_label'].pack(fill='x', padx=10, pady=2)
+            widgets['desc_label'].config(text=f"Enter {allocation_type} value")
         
-        # Save the allocation
+        # Save the allocation (and any entered text)
         self.save_slot_data(widgets, die, slot_num)
         
         # Update all allocation options to reflect the new unique allocation usage
@@ -519,21 +566,42 @@ class GearDieTab:
         
         if slot_key in allocations:
             data = allocations[slot_key]
+            # Prevent premature save while configuring widgets for load
+            self._loading_slot = True
             widgets['allocation_var'].set(data.get('type', 'hitpoints'))
             self.on_allocation_type_change(widgets, die, slot_num)
             
             if data.get('type') == 'spell':
                 widgets['spell_var'].set(data.get('value', ''))
+            elif data.get('type') in ('melee', 'ranged', 'unarmed'):
+                # Populate the large weapon description box
+                try:
+                    widgets['weapon_text'].delete('1.0', 'end')
+                    widgets['weapon_text'].insert('1.0', data.get('value', ''))
+                except Exception:
+                    pass
             else:
                 widgets['value_var'].set(data.get('value', ''))
+            self._loading_slot = False
+            # Ensure character_data reflects loaded value
+            self.save_slot_data(widgets, die, slot_num)
     
     def save_slot_data(self, widgets, die, slot_num):
         """Save slot data to character data"""
+        # Skip saving if we're in the middle of loading UI state
+        if getattr(self, '_loading_slot', False):
+            return
         slot_key = f"{die}_{slot_num}"
         allocation_type = widgets['allocation_var'].get()
         
         if allocation_type == 'spell':
             value = widgets['spell_var'].get()
+        elif allocation_type in ('melee', 'ranged', 'unarmed'):
+            # Read from the large weapon description box
+            try:
+                value = widgets['weapon_text'].get('1.0', 'end-1c')
+            except Exception:
+                value = ''
         else:
             value = widgets['value_var'].get()
         
