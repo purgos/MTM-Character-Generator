@@ -4,7 +4,6 @@ import random
 import datetime as _dt
 
 class DiceRollerTab:
-    """Simple dice roller with roll history."""
     def __init__(self, parent, character_data=None):
         self.parent = parent
         self.character_data = character_data or {}
@@ -27,93 +26,84 @@ class DiceRollerTab:
         left = ttk.Frame(paned)
         paned.add(left, weight=2)
 
-        roll_frame = ttk.LabelFrame(left, text='Roll Dice')
-        roll_frame.pack(fill='x', padx=8, pady=8)
-
-        # Die type
-        ttk.Label(roll_frame, text='Die:').grid(row=0, column=0, sticky='w', padx=(8,4), pady=6)
-        self.die_var = tk.StringVar(value='d20')
-        self.die_combo = ttk.Combobox(roll_frame, textvariable=self.die_var,
-                                      values=['d4','d6','d8','d10','d12','d20','d100'], state='readonly', width=8)
-        self.die_combo.grid(row=0, column=1, sticky='w', padx=4, pady=6)
-
-        # Count
-        ttk.Label(roll_frame, text='Count:').grid(row=0, column=2, sticky='w', padx=(16,4), pady=6)
-        self.count_var = tk.IntVar(value=1)
-        self.count_spin = ttk.Spinbox(roll_frame, from_=1, to=100, textvariable=self.count_var, width=6)
-        self.count_spin.grid(row=0, column=3, sticky='w', padx=4, pady=6)
-
-        # Modifier
-        ttk.Label(roll_frame, text='Modifier:').grid(row=0, column=4, sticky='w', padx=(16,4), pady=6)
-        self.mod_var = tk.IntVar(value=0)
-        self.mod_spin = ttk.Spinbox(roll_frame, from_=-999, to=999, textvariable=self.mod_var, width=6)
-        self.mod_spin.grid(row=0, column=5, sticky='w', padx=4, pady=6)
-
-        # Advantage checkbox
+        # Global roll options at the top (apply to all rolls)
+        options_frame = ttk.LabelFrame(left, text='Roll Options')
+        options_frame.pack(fill='x', padx=8, pady=(8, 6))
         self.adv_var = tk.BooleanVar(value=False)
-        self.adv_check = ttk.Checkbutton(roll_frame, text='Advantage', variable=self.adv_var, command=self._on_adv_changed)
-        self.adv_check.grid(row=0, column=6, sticky='w', padx=(16,8), pady=6)
-
-        # Disadvantage checkbox
         self.disadv_var = tk.BooleanVar(value=False)
-        self.disadv_check = ttk.Checkbutton(roll_frame, text='Disadvantage', variable=self.disadv_var, command=self._on_disadv_changed)
-        self.disadv_check.grid(row=0, column=7, sticky='w', padx=(4,8), pady=6)
+        self.adv_check = ttk.Checkbutton(options_frame, text='Advantage', variable=self.adv_var, command=self._on_adv_changed)
+        self.adv_check.grid(row=0, column=0, sticky='w', padx=(8,6), pady=4)
+        self.disadv_check = ttk.Checkbutton(options_frame, text='Disadvantage', variable=self.disadv_var, command=self._on_disadv_changed)
+        self.disadv_check.grid(row=0, column=1, sticky='w', padx=(4,8), pady=4)
 
-        # Roll button
-        self.roll_btn = ttk.Button(roll_frame, text='Roll', command=self.roll)
-        self.roll_btn.grid(row=0, column=8, sticky='w', padx=(8,8), pady=6)
+        # Quick Dice row(s)
+        roll_frame = ttk.LabelFrame(left, text='Roll Dice')
+        roll_frame.pack(fill='x', padx=8, pady=(0,6))
 
-        # --- Aspect quick-roll buttons ---
-        ttk.Separator(roll_frame, orient='horizontal').grid(row=1, column=0, columnspan=9, sticky='ew', pady=(6,2))
-        ttk.Label(roll_frame, text='Aspect:').grid(row=2, column=0, sticky='w', padx=(8,4), pady=6)
-        self.aspect_melee_btn = ttk.Button(roll_frame, text='Melee', command=lambda: self.roll_aspect('melee'))
-        self.aspect_melee_btn.grid(row=2, column=1, sticky='w', padx=2, pady=6)
-        self.aspect_ranged_btn = ttk.Button(roll_frame, text='Ranged', command=lambda: self.roll_aspect('ranged'))
-        self.aspect_ranged_btn.grid(row=2, column=2, sticky='w', padx=2, pady=6)
-        self.aspect_rogue_btn = ttk.Button(roll_frame, text='Rogue', command=lambda: self.roll_aspect('rogue'))
-        self.aspect_rogue_btn.grid(row=2, column=3, sticky='w', padx=2, pady=6)
-        self.aspect_magic_btn = ttk.Button(roll_frame, text='Magic', command=lambda: self.roll_aspect('magic'))
-        self.aspect_magic_btn.grid(row=2, column=4, sticky='w', padx=2, pady=6)
+        # Internal variables (kept for compatibility with roll()/aspect rolls)
+        self.die_var = tk.StringVar(value='d20')
+        self.count_var = tk.IntVar(value=1)
+        self.mod_var = tk.IntVar(value=0)
 
-        # --- Damage section ---
+        # Two-row quick buttons: d4 d6 d8 d10 / d12 d20 d100
+        btn_specs_row1 = [("d4", 4), ("d6", 6), ("d8", 8), ("d10", 10)]
+        btn_specs_row2 = [("d12", 12), ("d20", 20), ("d100", 100)]
+        for col, (label, sides) in enumerate(btn_specs_row1):
+            ttk.Button(roll_frame, text=label, width=6, command=lambda s=sides: self.quick_roll(s)).grid(
+                row=0, column=col, padx=4, pady=6, sticky='w'
+            )
+        for col, (label, sides) in enumerate(btn_specs_row2):
+            ttk.Button(roll_frame, text=label, width=6, command=lambda s=sides: self.quick_roll(s)).grid(
+                row=1, column=col, padx=4, pady=2, sticky='w'
+            )
+
+        # Aspect quick-rolls
+        aspect_frame = ttk.LabelFrame(left, text='Aspect Rolls')
+        aspect_frame.pack(fill='x', padx=8, pady=(0,8))
+        ttk.Label(aspect_frame, text='Quick:').grid(row=0, column=0, sticky='w', padx=(8,4), pady=6)
+        self.aspect_melee_btn = ttk.Button(aspect_frame, text='Melee', command=lambda: self.roll_aspect('melee'))
+        self.aspect_melee_btn.grid(row=0, column=1, sticky='w', padx=2, pady=6)
+        self.aspect_ranged_btn = ttk.Button(aspect_frame, text='Ranged', command=lambda: self.roll_aspect('ranged'))
+        self.aspect_ranged_btn.grid(row=0, column=2, sticky='w', padx=2, pady=6)
+        self.aspect_rogue_btn = ttk.Button(aspect_frame, text='Rogue', command=lambda: self.roll_aspect('rogue'))
+        self.aspect_rogue_btn.grid(row=0, column=3, sticky='w', padx=2, pady=6)
+        self.aspect_magic_btn = ttk.Button(aspect_frame, text='Magic', command=lambda: self.roll_aspect('magic'))
+        self.aspect_magic_btn.grid(row=0, column=4, sticky='w', padx=2, pady=6)
+
+        # Damage: two rows of gear dice (d4 d6 d8 / d10 d12)
         damage_frame = ttk.LabelFrame(left, text='Damage')
         damage_frame.pack(fill='x', padx=8, pady=(0,8))
-
         self.crit_var = tk.BooleanVar(value=False)
         ttk.Label(damage_frame, text='Critical:').grid(row=0, column=0, sticky='w', padx=(8,4), pady=6)
-        self.crit_check = ttk.Checkbutton(damage_frame, text='Critical Hit', variable=self.crit_var)
+        self.crit_check = ttk.Checkbutton(damage_frame, text='', variable=self.crit_var)
         self.crit_check.grid(row=0, column=1, sticky='w', padx=(0,12), pady=6)
-
         ttk.Label(damage_frame, text='Roll:').grid(row=0, column=2, sticky='w', padx=(8,4), pady=6)
         ttk.Button(damage_frame, text='d4', command=lambda: self.roll_damage(4)).grid(row=0, column=3, padx=2, pady=6)
         ttk.Button(damage_frame, text='d6', command=lambda: self.roll_damage(6)).grid(row=0, column=4, padx=2, pady=6)
         ttk.Button(damage_frame, text='d8', command=lambda: self.roll_damage(8)).grid(row=0, column=5, padx=2, pady=6)
-        ttk.Button(damage_frame, text='d10', command=lambda: self.roll_damage(10)).grid(row=0, column=6, padx=2, pady=6)
-        ttk.Button(damage_frame, text='d12', command=lambda: self.roll_damage(12)).grid(row=0, column=7, padx=2, pady=6)
+        ttk.Button(damage_frame, text='d10', command=lambda: self.roll_damage(10)).grid(row=1, column=3, padx=2, pady=(0,6))
+        ttk.Button(damage_frame, text='d12', command=lambda: self.roll_damage(12)).grid(row=1, column=4, padx=2, pady=(0,6))
 
-        # --- Skill Check section ---
+        # Skill Check: two rows of aspect buttons
         skill_frame = ttk.LabelFrame(left, text='Skill Check')
         skill_frame.pack(fill='x', padx=8, pady=(0,8))
-
         self.prof_bonus_var = tk.BooleanVar(value=False)
-        self.prof_check = ttk.Checkbutton(skill_frame, text='Profession Bonus +2', variable=self.prof_bonus_var)
+        self.prof_check = ttk.Checkbutton(skill_frame, text='Profession', variable=self.prof_bonus_var)
         self.prof_check.grid(row=0, column=0, columnspan=2, sticky='w', padx=(8,8), pady=6)
-
-        ttk.Label(skill_frame, text='Aspect:').grid(row=0, column=2, sticky='w', padx=(8,4), pady=6)
+        ttk.Label(skill_frame, text='Aspect:').grid(row=0, column=2, rowspan=2, sticky='w', padx=(8,4), pady=6)
         ttk.Button(skill_frame, text='Melee', command=lambda: self.skill_check('melee')).grid(row=0, column=3, padx=2, pady=6)
         ttk.Button(skill_frame, text='Ranged', command=lambda: self.skill_check('ranged')).grid(row=0, column=4, padx=2, pady=6)
-        ttk.Button(skill_frame, text='Rogue', command=lambda: self.skill_check('rogue')).grid(row=0, column=5, padx=2, pady=6)
-        ttk.Button(skill_frame, text='Magic', command=lambda: self.skill_check('magic')).grid(row=0, column=6, padx=2, pady=6)
+        ttk.Button(skill_frame, text='Rogue', command=lambda: self.skill_check('rogue')).grid(row=1, column=3, padx=2, pady=(0,6))
+        ttk.Button(skill_frame, text='Magic', command=lambda: self.skill_check('magic')).grid(row=1, column=4, padx=2, pady=(0,6))
 
-        # --- Armor / Dodge / Parry Saves ---
+        # Armor / Dodge / Parry
         saves_frame = ttk.LabelFrame(left, text='Armor / Dodge / Parry')
         saves_frame.pack(fill='x', padx=8, pady=(0,8))
-
         ttk.Button(saves_frame, text='Armor Save', command=self.armor_save).grid(row=0, column=0, padx=8, pady=6, sticky='w')
         ttk.Button(saves_frame, text='Dodge Save', command=self.dodge_save).grid(row=0, column=1, padx=8, pady=6, sticky='w')
         ttk.Button(saves_frame, text='Parry Info', command=self.parry_info).grid(row=0, column=2, padx=8, pady=6, sticky='w')
 
-        # --- Magic Save ---
+        # Magic Save
         magic_frame = ttk.LabelFrame(left, text='Magic Save')
         magic_frame.pack(fill='x', padx=8, pady=(0,8))
         ttk.Button(magic_frame, text='Roll Magic Save', command=self.magic_save).grid(row=0, column=0, padx=8, pady=6, sticky='w')
@@ -237,6 +227,35 @@ class DiceRollerTab:
         # Execute roll with current count/modifier/advantage settings
         self.roll()
 
+    def quick_roll(self, sides: int):
+        """Quick roll: set die, count=1, modifier=0, then delegate to roll() with global Adv/Dis."""
+        try:
+            int(sides)
+        except Exception:
+            return
+        self.die_var.set(f'd{int(sides)}')
+        self.count_var.set(1)
+        self.mod_var.set(0)
+        # Ensure no stale aspect prefix
+        self._roll_prefix = None
+        self.roll()
+
+    def _reset_roll_toggles(self):
+        """Reset Advantage, Disadvantage, Critical, and Profession checkboxes."""
+        try:
+            self.adv_var.set(False)
+            self.disadv_var.set(False)
+        except Exception:
+            pass
+        try:
+            self.crit_var.set(False)
+        except Exception:
+            pass
+        try:
+            self.prof_bonus_var.set(False)
+        except Exception:
+            pass
+
     def roll(self):
         sides = self._parse_die(self.die_var.get())
         count = max(1, int(self.count_var.get() or 1))
@@ -288,31 +307,60 @@ class DiceRollerTab:
 
         # Clear prefix after use
         self._roll_prefix = None
+        # Reset toggles after a roll
+        self._reset_roll_toggles()
 
     def roll_damage(self, sides: int):
-        """Roll damage: normal = roll + rank; critical = max + roll + rank."""
+        """Roll damage: normal = roll + rank; critical = max + roll + rank.
+        Advantage/Disadvantage applies to the damage die as well.
+        """
         try:
             rank = int((self.character_data or {}).get('rank', 1) or 1)
         except Exception:
             rank = 1
-        r = random.randint(1, sides)
+
+        # Apply advantage/disadvantage to the damage die
+        use_adv = bool(self.adv_var.get())
+        use_disadv = bool(self.disadv_var.get())
+        if use_adv and use_disadv:
+            use_adv = use_disadv = False
+
+        if use_adv:
+            a = random.randint(1, sides)
+            b = random.randint(1, sides)
+            r = max(a, b)
+            rolls_detail = [a, b]
+            flag_list = ['adv']
+        elif use_disadv:
+            a = random.randint(1, sides)
+            b = random.randint(1, sides)
+            r = min(a, b)
+            rolls_detail = [a, b]
+            flag_list = ['dis']
+        else:
+            r = random.randint(1, sides)
+            rolls_detail = [r]
+            flag_list = []
+
         is_crit = bool(self.crit_var.get())
         if is_crit:
             total = sides + r + rank
-            flags_str = " (crit)"
+            flags_str = " (crit" + (", " + ", ".join(flag_list) if flag_list else "") + ")"
             detail = f"({sides} + {r} + {rank})"
         else:
             total = r + rank
-            flags_str = ""
+            flags_str = f" ({', '.join(flag_list)})" if flag_list else ""
             detail = f"({r} + {rank})"
 
         die_notation = f"d{sides}"
-        final_text = f"Damage {die_notation} = {total}{flags_str}  {detail}"
+        final_text = f"Damage {die_notation} = {total}{flags_str}  ({', '.join(map(str, rolls_detail))}  +{rank})"
         
         # Update result label
         self.result_label.config(text=final_text)
         # Append to history
         self._add_history_entry(final_text)
+        # Reset toggles after a roll
+        self._reset_roll_toggles()
 
     def _melee_table_outcome(self, value: int) -> str:
         """Return outcome string per Melee table for a clamped 1..20 value."""
@@ -361,13 +409,14 @@ class DiceRollerTab:
         if mods:
             detail_mods.append('+'.join(mods))
         if table_shift:
-            # changed display label from 'table+1' to 'tower+1'
-            detail_mods.append('tower+1')
+            detail_mods.append('table+1')
         detail_tail = (" " + ", ".join(detail_mods)) if detail_mods else ""
         final_text = f"Armor Save: d20{mod_str} = {total_roll}{flags_str}  ({', '.join(map(str, rolls_detail))}{detail_tail})\n→ {outcome}"
 
         self.result_label.config(text=final_text)
         self._add_history_entry(final_text)
+        # Reset toggles after a roll
+        self._reset_roll_toggles()
 
     def dodge_save(self):
         """Dodge save: same table as armor. Apply UC bonus only."""
@@ -384,6 +433,8 @@ class DiceRollerTab:
 
         self.result_label.config(text=final_text)
         self._add_history_entry(final_text)
+        # Reset toggles after a roll
+        self._reset_roll_toggles()
 
     def parry_info(self):
         """Show parry effect based on UC rank; also show if Parry is allocated."""
@@ -411,6 +462,8 @@ class DiceRollerTab:
         final_text = f"Magic Save: d20 = {roll}{flags_str}  ({', '.join(map(str, rolls_detail))})\n→ {outcome}"
         self.result_label.config(text=final_text)
         self._add_history_entry(final_text)
+        # Reset toggles after a roll
+        self._reset_roll_toggles()
 
     def skill_check(self, aspect: str):
         """Roll d20 and add aspect-based modifier and optional profession bonus."""
@@ -458,6 +511,8 @@ class DiceRollerTab:
         # Update result label and history
         self.result_label.config(text=final_text)
         self._add_history_entry(final_text)
+        # Reset toggles after a roll
+        self._reset_roll_toggles()
 
     def _add_history_entry(self, text: str):
         """Add a new entry to the history (newest first) with wrapping and indentation."""
