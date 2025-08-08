@@ -26,6 +26,8 @@ class BasicInfoTab:
         self.MAGIC_ITEMS = MAGIC_ITEMS
         # Guard for preventing duplicate custom item dialogs
         self._custom_item_dialog = None
+        # Track whether current HP has been initialized from max HP
+        self._hp_initialized = False
         self.create_tab()
         
     def on_magic_item_selected(self, event=None):
@@ -251,15 +253,34 @@ class BasicInfoTab:
         combat_frame = ttk.LabelFrame(frame, text="Combat Statistics")
         combat_frame.grid(row=7, column=0, columnspan=2, padx=5, pady=5, sticky='ew')
 
-        # HP
+        # Current / Max HP with step controls and Heal Full button
         ttk.Label(combat_frame, text="Current HP:").grid(row=0, column=0, padx=5, pady=2)
-        self.hp_entry = ttk.Entry(combat_frame)
-        self.hp_entry.grid(row=0, column=1, padx=5, pady=2)
+        hp_ctrl = ttk.Frame(combat_frame)
+        hp_ctrl.grid(row=0, column=1, padx=5, pady=2, sticky='w')
+        self.current_hp_var = tk.IntVar(value=0)
+        self.hp_step_var = tk.IntVar(value=1)
+        # Non-editable current HP display placed before controls
+        self.current_hp_label = ttk.Label(hp_ctrl, textvariable=self.current_hp_var, width=6, anchor='e')
+        self.current_hp_label.pack(side='left', padx=(0, 6))
+        # Buttons and step entry to modify current HP
+        ttk.Button(hp_ctrl, text="-", width=2,
+                   command=lambda: self._inc_var(self.current_hp_var, -self._get_step(self.hp_step_var))).pack(side='left')
+        self.hp_step_entry = ttk.Entry(
+            hp_ctrl,
+            textvariable=self.hp_step_var,
+            width=6,
+            validate='key',
+            validatecommand=(self.tab.register(self._validate_nonnegative_int), '%P')
+        )
+        self.hp_step_entry.pack(side='left', padx=3)
+        ttk.Button(hp_ctrl, text="+", width=2,
+                   command=lambda: self._inc_var(self.current_hp_var, +self._get_step(self.hp_step_var))).pack(side='left')
 
         ttk.Label(combat_frame, text="/").grid(row=0, column=2, padx=5, pady=2)
         ttk.Label(combat_frame, text="Max HP:").grid(row=0, column=3, padx=5, pady=2)
         self.max_hp_entry = ttk.Entry(combat_frame)
         self.max_hp_entry.grid(row=0, column=4, padx=5, pady=2)
+        ttk.Button(combat_frame, text="Heal Full", command=self.heal_to_full).grid(row=0, column=5, padx=5, pady=2)
 
         # Indoor Speed
         ttk.Label(combat_frame, text="Indoor Speed:").grid(row=1, column=0, padx=5, pady=2)
@@ -432,10 +453,33 @@ class BasicInfoTab:
         self.update_max_hp_display()
     
     def update_max_hp_display(self):
-        """Update the max HP display with current calculation"""
+        """Update the max HP display with current calculation, and default current HP to max on first calc."""
         max_hp = self.calculate_max_hp()
         self.max_hp_entry.delete(0, tk.END)
         self.max_hp_entry.insert(0, str(max_hp))
+        # Initialize or clamp current HP
+        try:
+            cur = int(self.current_hp_var.get()) if hasattr(self, 'current_hp_var') else 0
+        except Exception:
+            cur = 0
+        if not getattr(self, '_hp_initialized', False):
+            if hasattr(self, 'current_hp_var'):
+                self.current_hp_var.set(max_hp)
+            self._hp_initialized = True
+        else:
+            if hasattr(self, 'current_hp_var') and cur > max_hp:
+                self.current_hp_var.set(max_hp)
+
+    def heal_to_full(self):
+        """Set current HP to the latest Max HP."""
+        # Ensure max HP is up to date
+        self.update_max_hp_display()
+        try:
+            max_hp = int(self.max_hp_entry.get() or 0)
+        except Exception:
+            max_hp = self.calculate_max_hp()
+        if hasattr(self, 'current_hp_var'):
+            self.current_hp_var.set(max_hp)
 
     def on_type_change(self, *args):
         """Handle type change - call the callback if it exists"""
@@ -486,7 +530,7 @@ class BasicInfoTab:
             'rankPoints': int(self.total_rank_points_var.get()),
             'magicItems': magic_items_export,
             'combatStats': {
-                'hp': int(self.hp_entry.get() or 0),
+                'hp': self._get_int(self.current_hp_var),
                 'maxHp': int(self.max_hp_entry.get() or 0),
                 'indoorSpeed': indoor_speed,
                 'initiative': self.calculate_initiative(),
@@ -545,11 +589,26 @@ class BasicInfoTab:
         
         # Set combat stats
         combat_stats = data.get('combatStats', {})
-        self.hp_entry.delete(0, tk.END)
-        self.hp_entry.insert(0, str(combat_stats.get('hp', 0)))
+        # Current HP via IntVar (default to calculated max if not provided)
+        try:
+            saved_hp = int(combat_stats.get('hp', 0))
+        except Exception:
+            saved_hp = 0
+        calc_max = self.calculate_max_hp()
+        if saved_hp > 0:
+            self.current_hp_var.set(saved_hp)
+            self._hp_initialized = True
+        else:
+            self.current_hp_var.set(calc_max)
+            self._hp_initialized = True
         
+        # Max HP entry uses saved if provided, else calculate
         self.max_hp_entry.delete(0, tk.END)
-        self.max_hp_entry.insert(0, str(combat_stats.get('maxHp', 0)))
+        try:
+            saved_max = int(combat_stats.get('maxHp', 0))
+        except Exception:
+            saved_max = 0
+        self.max_hp_entry.insert(0, str(saved_max if saved_max > 0 else calc_max))
         
         # Initiative is calculated automatically, so we just update the display
         self.update_initiative_display()
