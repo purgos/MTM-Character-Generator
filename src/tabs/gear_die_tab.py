@@ -312,7 +312,7 @@ class GearDieTab:
             widgets['spell_combo'].pack(side='left', padx=2)
             self.update_spell_dropdown(widgets, die)
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text="Select a spell to see its details")
+            widgets['desc_label'].config(text="Select a spell to see its details", foreground='black')
         elif allocation_type == 'hitpoints':
             widgets['value_entry'].pack(side='left', padx=2)
             # Set hitpoints value based on die
@@ -320,7 +320,7 @@ class GearDieTab:
             widgets['value_var'].set(str(hp_values[die]))
             widgets['value_entry'].config(state='readonly')
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=f"Adds {hp_values[die]} hitpoints")
+            widgets['desc_label'].config(text=f"Adds {hp_values[die]} hitpoints", foreground='black')
         elif allocation_type == 'shield':
             shield_text = (
                 "Shields are a special kind of armor. When combined with armor, a shield allows you to "
@@ -329,7 +329,7 @@ class GearDieTab:
                 "be used with missile fire or two-handed weapons."
             )
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=shield_text)
+            widgets['desc_label'].config(text=shield_text, foreground='black')
         elif allocation_type == 'tower shield':
             tower_text = (
                 "Tower Shields provide an additional +1 armor value taking up the initial D4 slot. They also "
@@ -340,7 +340,7 @@ class GearDieTab:
                 "they were wielding it themselves."
             )
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=tower_text)
+            widgets['desc_label'].config(text=tower_text, foreground='black')
         elif allocation_type == 'armor':
             # Armor category header depends on die
             if die in ['d4', 'd6']:
@@ -366,7 +366,7 @@ class GearDieTab:
                 "if a critical hit or three if Improved Critical)."
             )
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=f"{armor_header}\n\n{armor_text}")
+            widgets['desc_label'].config(text=f"{armor_header}\n\n{armor_text}", foreground='black')
         elif allocation_type == 'dodge':
             rank = int(self.character_data.get('rank', 1) or 1)
             current_bonus = min(5, max(0, rank // 2))
@@ -375,7 +375,7 @@ class GearDieTab:
                 "A rank 2 UC Specialist adds +1 to all armor checks. This ability increases by one every other level to a maximum of +5."
             )
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=f"{dodge_text}\n\nCurrent Bonus: +{current_bonus}")
+            widgets['desc_label'].config(text=f"{dodge_text}\n\nCurrent Bonus: +{current_bonus}", foreground='black')
         elif allocation_type == 'parry':
             rank = int(self.character_data.get('rank', 1) or 1)
             parry_text = (
@@ -387,7 +387,7 @@ class GearDieTab:
                 else "Current Effect: 2 damage rolls (take lowest) [shield-like]"
             )
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=f"{parry_text}\n\n{current_effect}")
+            widgets['desc_label'].config(text=f"{parry_text}\n\n{current_effect}", foreground='black')
         elif allocation_type in ('melee', 'ranged', 'unarmed'):
             # Show the prompt label and large text box for weapon description
             widgets['weapon_label'].pack(side='left', padx=6)
@@ -398,7 +398,7 @@ class GearDieTab:
             widgets['value_var'].set('')
             widgets['value_entry'].pack(side='left', padx=2)
             widgets['desc_label'].pack(fill='x', padx=10, pady=2)
-            widgets['desc_label'].config(text=f"Enter {allocation_type} value")
+            widgets['desc_label'].config(text=f"Enter {allocation_type} value", foreground='black')
         
         # Save the allocation (and any entered text)
         self.save_slot_data(widgets, die, slot_num)
@@ -608,6 +608,29 @@ class GearDieTab:
             description += f"Duration: {spell_data.get('duration', 'None')}\n"
             description += f"Frequency: {spell_data.get('frequency', 'None')}\n"
             description += f"Description: {spell_data['description']}"
+            # Check for Material Component owned in inventory
+            if 'MC' in spell_data.get('spell_components', []) and spell_data.get('material_component'):
+                needed = spell_data['material_component']
+                has_it = False
+                try:
+                    materials = self.character_data.get('inventory', {}).get('materials', [])
+                    for item in materials:
+                        if str(item.get('component','')).strip().lower() == str(needed).strip().lower() and int(item.get('quantity',0)) > 0:
+                            has_it = True
+                            break
+                except Exception:
+                    has_it = False
+                if not has_it:
+                    description += "\n\n" + "Missing Material Component"
+                    try:
+                        widgets['desc_label'].configure(foreground='red')
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        widgets['desc_label'].configure(foreground='black')
+                    except Exception:
+                        pass
             widgets['desc_label'].config(text=description)
             self.save_slot_data(widgets, die, slot_num)
     

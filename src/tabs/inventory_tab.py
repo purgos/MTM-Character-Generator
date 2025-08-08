@@ -12,6 +12,18 @@ except ModuleNotFoundError:
         if _base_dir not in _sys.path:
             _sys.path.insert(0, _base_dir)
         from magic_items import MAGIC_ITEMS
+try:
+    # access spells data (for material components)
+    from spells import SPELLS
+except ModuleNotFoundError:
+    try:
+        from ..spells import SPELLS
+    except Exception:
+        import os, sys as _sys
+        _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if _base_dir not in _sys.path:
+            _sys.path.insert(0, _base_dir)
+        from spells import SPELLS
 
 class InventoryTab:
     def __init__(self, parent, character_data):
@@ -25,8 +37,16 @@ class InventoryTab:
                 'stored': [],
                 'magic': [],
                 'stored_magic': [],
-                'elsewhere': []
+                'elsewhere': [],
+                'materials': []
             }
+        else:
+            # Backfill missing keys
+            self.character_data['inventory'].setdefault('stored', [])
+            self.character_data['inventory'].setdefault('magic', [])
+            self.character_data['inventory'].setdefault('stored_magic', [])
+            self.character_data['inventory'].setdefault('elsewhere', [])
+            self.character_data['inventory'].setdefault('materials', [])
         
         self.create_tab()
         
@@ -197,6 +217,61 @@ class InventoryTab:
         self.sm_desc_text = tk.Text(sm_desc_frame, wrap='word', height=6, state='disabled')
         self.sm_desc_text.pack(fill='both', expand=True, padx=5, pady=5)
 
+        # Material Components
+        materials_frame = ttk.Frame(inventory_notebook)
+        inventory_notebook.add(materials_frame, text="Material Components")
+
+        # Build list of spells requiring MC
+        self.mc_spells = []
+        for s_name, s_def in SPELLS.items():
+            if 'MC' in s_def.get('spell_components', []) and s_def.get('material_component'):
+                self.mc_spells.append((s_name, s_def.get('material_component')))
+        self.mc_spells.sort(key=lambda x: x[0].lower())
+
+        mc_add_frame = ttk.Frame(materials_frame)
+        mc_add_frame.pack(fill='x', padx=5, pady=5)
+
+        ttk.Label(mc_add_frame, text="Spell:").pack(side='left', padx=5)
+        self.mc_spell_var = tk.StringVar()
+        self.mc_spell_combo = ttk.Combobox(
+            mc_add_frame,
+            textvariable=self.mc_spell_var,
+            values=[name for name, _ in self.mc_spells],
+            state='readonly', width=40
+        )
+        self.mc_spell_combo.pack(side='left', padx=5)
+        self.mc_spell_combo.bind('<<ComboboxSelected>>', self.on_mc_spell_selected)
+
+        ttk.Label(mc_add_frame, text="Component:").pack(side='left', padx=5)
+        self.mc_component_var = tk.StringVar()
+        self.mc_component_entry = ttk.Entry(mc_add_frame, textvariable=self.mc_component_var, width=30, state='readonly')
+        self.mc_component_entry.pack(side='left', padx=5)
+
+        ttk.Label(mc_add_frame, text="Qty:").pack(side='left', padx=5)
+        self.mc_quantity_var = tk.StringVar(value="1")
+        self.mc_quantity_entry = ttk.Entry(mc_add_frame, textvariable=self.mc_quantity_var, width=6)
+        self.mc_quantity_entry.pack(side='left', padx=5)
+
+        mc_add_button = ttk.Button(mc_add_frame, text="Add Component", command=self.add_material_component)
+        mc_add_button.pack(side='left', padx=5)
+
+        # Listbox for materials
+        self.materials_listbox = tk.Listbox(materials_frame)
+        self.materials_listbox.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Controls for materials
+        mc_controls = ttk.Frame(materials_frame)
+        mc_controls.pack(fill='x', padx=5, pady=5)
+
+        mc_remove_button = ttk.Button(mc_controls, text="Remove Selected", command=self.remove_material_component)
+        mc_remove_button.pack(side='left', padx=5)
+
+        mc_dec_button = ttk.Button(mc_controls, text="Decrease Quantity", command=lambda: self.adjust_material_quantity(-1))
+        mc_dec_button.pack(side='left', padx=5)
+
+        mc_inc_button = ttk.Button(mc_controls, text="Increase Quantity", command=lambda: self.adjust_material_quantity(1))
+        mc_inc_button.pack(side='left', padx=5)
+
         # Elsewhere
         elsewhere_frame = ttk.Frame(inventory_notebook)
         inventory_notebook.add(elsewhere_frame, text="Elsewhere")
@@ -254,7 +329,8 @@ class InventoryTab:
             'stored': self.stored_listbox,
             'magic': self.magic_listbox,
             'stored_magic': self.stored_magic_listbox,
-            'elsewhere': self.elsewhere_listbox
+            'elsewhere': self.elsewhere_listbox,
+            'materials': self.materials_listbox
         }
         
         # Store variable references (exclude stored_magic, handled separately)
@@ -272,6 +348,84 @@ class InventoryTab:
         
         # Load existing inventory data
         self.load_inventory_data()
+
+    # --- Material Components helpers ---
+    def on_mc_spell_selected(self, event=None):
+        name = self.mc_spell_var.get().strip()
+        comp = ''
+        if name:
+            for s_name, material in self.mc_spells:
+                if s_name == name:
+                    comp = material or ''
+                    break
+        self.mc_component_var.set(comp)
+
+    def add_material_component(self):
+        name = self.mc_spell_var.get().strip()
+        comp = self.mc_component_var.get().strip()
+        qty_str = self.mc_quantity_var.get().strip()
+        if not name or not comp:
+            messagebox.showwarning("Warning", "Please select a spell to add its component.")
+            return
+        try:
+            qty = int(qty_str)
+            if qty <= 0:
+                messagebox.showwarning("Warning", "Quantity must be positive.")
+                return
+        except ValueError:
+            messagebox.showwarning("Warning", "Quantity must be a number.")
+            return
+        # Append to data
+        self.character_data['inventory']['materials'].append({
+            'spell': name,
+            'component': comp,
+            'quantity': qty
+        })
+        self.refresh_materials_listbox()
+        # clear
+        self.mc_spell_combo.set('')
+        self.mc_component_var.set('')
+        self.mc_quantity_var.set('1')
+
+    def remove_material_component(self):
+        lb = self.materials_listbox
+        sel = lb.curselection()
+        if not sel:
+            messagebox.showwarning("Warning", "Please select a component to remove.")
+            return
+        idx = sel[0]
+        if idx < len(self.character_data['inventory']['materials']):
+            self.character_data['inventory']['materials'].pop(idx)
+        self.refresh_materials_listbox()
+
+    def adjust_material_quantity(self, delta):
+        lb = self.materials_listbox
+        sel = lb.curselection()
+        if not sel:
+            messagebox.showwarning("Warning", "Please select a component to adjust.")
+            return
+        idx = sel[0]
+        if idx >= len(self.character_data['inventory']['materials']):
+            return
+        item = self.character_data['inventory']['materials'][idx]
+        new_q = item.get('quantity', 0) + delta
+        if new_q <= 0:
+            # remove
+            self.character_data['inventory']['materials'].pop(idx)
+        else:
+            item['quantity'] = new_q
+        self.refresh_materials_listbox()
+
+    def refresh_materials_listbox(self):
+        if not hasattr(self, 'materials_listbox'):
+            return
+        self.materials_listbox.delete(0, tk.END)
+        for item in self.character_data['inventory'].get('materials', []):
+            comp = item.get('component', '')
+            spell = item.get('spell', '')
+            qty = item.get('quantity', 0)
+            display = f"{comp} (x{qty}) - for {spell}"
+            self.materials_listbox.insert(tk.END, display)
 
     # --- Helpers to sanitize names/description (match BasicInfoTab) ---
     def sanitize_item_name(self, name: str) -> str:
