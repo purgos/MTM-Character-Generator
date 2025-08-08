@@ -216,7 +216,7 @@ class GearDieTab:
         return widgets
     
     def on_free_slot_change(self, *args):
-        """Handle free slot option change"""
+        """Handle free slot option change (no cap enforcement here)."""
         option = self.free_slot_var.get()
         
         # Update description based on selection
@@ -225,11 +225,11 @@ class GearDieTab:
             'improvised': "Character can use improvised weapons and objects in combat.",
             'unarmed': "Character is trained in unarmed combat techniques."
         }
-        
         self.free_slot_desc.config(text=descriptions.get(option, ""))
         
-        # Save the free slot data
+    # Save and propagate changes
         self.save_free_slot_data()
+        self.update_allocation_options_for_all_slots()
     
     def update_free_slot_radio_states(self):
         """Update radio button states based on unarmed combat status"""
@@ -266,6 +266,8 @@ class GearDieTab:
     def on_allocation_type_change(self, widgets, die, slot_num):
         """Handle allocation type change"""
         allocation_type = widgets['allocation_var'].get()
+        slot_key = f"{die}_{slot_num}"
+        prev_type = self.character_data.get('gearDieAllocations', {}).get(slot_key, {}).get('type', 'hitpoints')
         
         # Check if parry is selected but unarmed combat is not enabled
         if allocation_type == 'parry' and not self.character_data.get('unarmedCombat', False):
@@ -286,6 +288,17 @@ class GearDieTab:
             messagebox.showwarning("Invalid Slot", "Shields can only be placed in a D4 gear die slot.")
             widgets['allocation_var'].set('hitpoints')
             allocation_type = 'hitpoints'
+        
+        # Enforce offensive cap before applying UI changes
+        if allocation_type in ('melee', 'ranged', 'unarmed'):
+            # Count excluding this slot's previous selection
+            if self._count_offensive_allocations(exclude_slot=slot_key, include_free_slot=False) >= 2:
+                messagebox.showwarning("Weapon Limit Reached",
+                                       "You can only have two total of Melee, Ranged, or Unarmed across your gear die slots.")
+                # Revert to previous type if still allowed, else hitpoints
+                revert = prev_type if prev_type not in ('melee', 'ranged', 'unarmed') else 'hitpoints'
+                widgets['allocation_var'].set(revert)
+                allocation_type = widgets['allocation_var'].get()
         
         # Reset visibility defaults
         widgets['value_entry'].pack_forget()
@@ -451,6 +464,11 @@ class GearDieTab:
         if unarmed_combat and not used_defensive_options:
             options.append('parry')
         
+        # Enforce cap: if two offensive already exist (excluding this slot), don't offer more
+        offensive_types = {'melee', 'ranged', 'unarmed'}
+        if self._count_offensive_allocations(exclude_slot=f"{die}_{slot_num}", include_free_slot=False) >= 2:
+            options = [opt for opt in options if opt not in offensive_types]
+        
         # Update dropdown values
         widgets['allocation_combo']['values'] = options
         
@@ -459,6 +477,27 @@ class GearDieTab:
             widgets['allocation_var'].set('hitpoints')
             # Trigger the change handler
             self.on_allocation_type_change(widgets, die, slot_num)
+
+    def _count_offensive_allocations(self, exclude_slot=None, include_free_slot=True):
+        """Count total allocations of types melee/ranged/unarmed across all slots.
+        Optionally exclude a slot key and/or the free slot radio selection."""
+        offensive_types = {'melee', 'ranged', 'unarmed'}
+        count = 0
+        allocations = self.character_data.get('gearDieAllocations', {})
+        for slot_key, data in allocations.items():
+            if exclude_slot and slot_key == exclude_slot:
+                continue
+            if data.get('type') in offensive_types:
+                count += 1
+        if include_free_slot:
+            try:
+                if self.free_slot_var.get() == 'unarmed':
+                    count += 1
+            except Exception:
+                # If UI not initialized yet, fall back to character_data
+                if self.character_data.get('freeSlotOption') == 'unarmed':
+                    count += 1
+        return count
 
     def get_used_unique_allocations(self, exclude_slot=None):
         """Get list of unique allocation types that are currently in use"""

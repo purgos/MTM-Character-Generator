@@ -546,6 +546,8 @@ class BasicInfoTab:
                 'heroPoints': self._get_int(self.hero_points_var)
             },
             'resources': {
+                # Write both gold and money for backward compatibility
+                'gold': self._get_int(self.money_var),
                 'money': self._get_int(self.money_var),
                 'magicDust': self._get_int(self.magic_dust_var)
             }
@@ -644,8 +646,12 @@ class BasicInfoTab:
         
         # Set resources via IntVars
         resources = data.get('resources', {})
+        # Prefer 'gold' if present, else fall back to 'money'
         try:
-            self.money_var.set(int(resources.get('money', 0)))
+            gold_val = resources.get('gold')
+            if gold_val is None:
+                gold_val = resources.get('money', 0)
+            self.money_var.set(int(gold_val))
         except Exception:
             self.money_var.set(0)
         try:
