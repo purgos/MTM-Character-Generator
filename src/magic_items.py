@@ -87,7 +87,7 @@ MAGIC_ITEMS = {
             'type': 'permanent'
         },
         'Cloak of Spell Resistance': {
-            'name': 'Cloak of Spell Resistance +',
+            'name': 'Cloak of Spell Resistance',
             'description': "This permanent use item confers a permanent bonus of +1 to +5 to the wearer's magic saves as long as it is worn.",
             'type': 'permanent',
             'variants': ['+1', '+2', '+3', '+4', '+5']
