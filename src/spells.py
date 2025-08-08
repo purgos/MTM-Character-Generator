@@ -31,22 +31,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                 'frequency': 'This spell can be cast once per encounter.',
                 'prerequisite': 'Magic Aspect D6',
                 'spell_components': ['I', 'S']},
- 'ALWAYS BETTER': {'area_of_effect': 'The Casters Line of Vision',
-                   'description': 'This spell allows the caster to give the target an additional pair of arms. The '
-                                  'effect lasts for a number of rounds equal to the gear die rolled. The target gets '
-                                  'an extra attack action as a benefit. If the target does not have weapons available '
-                                  'for each new arm, they can instead make an Improvised Weapon attack with those arms '
-                                  'as though they had the Improvised Weapon ability. If the target already has the '
-                                  'improvised weapon ability, the additional arm attacks would instead be at 1d6 '
-                                  'damage. A rank 7 or better caster can cast this spell once per encounter.  Mutable '
-                                  'Form (I, 0, S) This spell allows the recipient to assume a mutable form that makes '
-                                  'the target immune from critical hits for a number of rounds equal to the gear die '
-                                  'rolled. A rank 7 or better caster can cast this spell on one ally instead. This '
-                                  'spell can be cast once per day per target',
-                   'duration': 'Persistent',
-                   'frequency': 'This spell can be cast once per day.',
-                   'prerequisite': 'Magic Aspect D12',
-                   'spell_components': ['I']},
+ 
  'ANALYZE': {'area_of_effect': 'One Item',
              'description': 'Allows a check to detect if one item is magical. The GM always makes this roll for the '
                             'character. The caster must touch the item and spend one hour studying and using it. '
@@ -66,7 +51,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
              'frequency': 'This spell can be cast once per day.',
              'material_component': '50GP Pearl',
              'prerequisite': 'Magic Aspect D12',
-             'spell_components': ['O']},
+             'spell_components': ['O', 'MC']},
  'ANIMATE OBJECT': {'area_of_effect': 'The Casters Line of Vision',
                     'description': 'Allows the caster to animate one unoccupied object up to 10 pounds per rank and '
                                    'not classified as a weapon for a number of rounds equal to the gear die roll and '
@@ -117,12 +102,23 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                      'description': 'Unleashes a bolt of electricity that arcs from one target to another affecting 2 '
                                     'targets at minimum plus an additional target per gear die rolled causing its gear '
                                     'die in damage to all affected creatures. A rank 7 or better caster can affect an '
-                                    'additional target per rank. This spell can be cast every other round. CHARM '
-                                    'MONSTER/',
+                                    'additional target per rank.',
                      'duration': 'Instantaneous',
-                     'frequency': 'This spell can be cast once per day.',
+                     'frequency': 'This spell can be cast every other round.',
                      'prerequisite': 'Magic Aspect D10',
                      'spell_components': ['E*', 'I', 'O']},
+ 'CHARM MONSTER/PERSON': {'area_of_effect': 'The Casters Line of Vision',
+                          'description': 'This spell allows the caster to compel the target to do their bidding. The target will not '
+                                         'bring harm to themselves but will obey any other verbal commands given to them for a number of '
+                                         'rounds equal to the gear die rolled. All targets get a Magic save at the beginning of the '
+                                         'original casters round to break the Charm effect with a DL of 11. The caster must remain within '
+                                         'visual range of any targets and use a full round action to maintain the Charm. A rank 7 or '
+                                         'higher caster can affect a number of targets equal to the gear die rolled and may use a Move '
+                                         'Action to maintain the spell instead.',
+                          'duration': 'Persistent',
+                          'frequency': 'This spell can be cast once per day.',
+                          'prerequisite': 'Magic Aspect D8',
+                          'spell_components': ['I', 'S']},
  'COME TO ME': {'area_of_effect': 'A Single or Multiple Creatures',
                 'description': 'Allows the caster to shout taunting insults to a number of creatures equal to the gear '
                                'die roll. The caster may choose to target less creatures than the gear die roll. '
@@ -193,9 +189,9 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                           'take on the exhausted condition for a number of rounds equal to the gear die roll',
            'duration': 'Instantaneous',
            'frequency': 'This spell can be cast once per week.',
-           'material_component': '1 Vampires Fang Prerequisite: Magic Aspect D12',
+           'material_component': '1 Vampires Fang',
            'prerequisite': 'Magic Aspect D12',
-           'spell_components': ['I']},
+           'spell_components': ['I', 'MC']},
  'DISADVANTAGED': {'area_of_effect': 'The Casters Line of Vision',
                    'description': 'This spell allows the caster to plant a mental suggestion into the targets mind '
                                   'causing the target to make two dice rolls on either Aspect Checks, Armor Checks, or '
@@ -207,13 +203,11 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                    'prerequisite': 'Magic Aspect D8',
                    'spell_components': ['I', 'S']},
  'DISPLACEMENT': {'area_of_effect': 'The Caster',
-                  'description': 'Causes one man-sized enemy to hesitate for a number of rounds equal to the gear die '
-                                 'roll. Victims take on the Dazed condition. Dazzled creatures can’t become undazzled '
-                                 'unless attacked successfully with a melee or ranged weapon, a spell, (both doing '
-                                 'full damage with no saves or armor bonuses) or a lessen effect spell. A rank 7 or '
-                                 'better caster can affect a number of creatures equal to the gear die roll',
+                  'description': 'Causes any melee or ranged attack to incur a 25% miss chance for a number of rounds '
+                                 'equal to the gear die roll. A rank seven or better caster incurs a 50% miss chance '
+                                 'per casting. This spell cannot be used in conjunction with Mirror Image or Burrow.',
                   'duration': 'Persistent',
-                  'frequency': 'This spell can be cast once per encounter per target.',
+                  'frequency': 'This spell can be cast once per encounter.',
                   'prerequisite': 'Magic Aspect D10',
                   'spell_components': ['I', 'S']},
  'DOWN THE DRAIN': {'area_of_effect': 'The Caster and One Opponent',
@@ -236,11 +230,11 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                   'spell may be cast once per encounter. A rank 7 or better caster can cast this spell '
                                   'twice per encounter.',
                    'duration': 'Instantaneous',
-                   'frequency': 'This spell can be cast once per day.',
+                   'frequency': 'This spell may be cast once per encounter.',
                    'prerequisite': 'Magic Aspect D8',
                    'spell_components': ['E', 'I', 'O']},
- "DUDE YOU'RE STONED": {'area_of_effect': 'A 10’x10’ square or a line 4 squares long',
-                        'description': 'This spells grants a gaze attack to the caster that can turn its target to '
+ "DUDE YOU'RE STONED": {'area_of_effect': 'Casters Line of Vision',
+                        'description': 'This spell grants a gaze attack to the caster that can turn its target to '
                                        'stone temporarily. Any creature affected by this gaze is immediately turned to '
                                        'stone for a number of rounds equal to the gear die rolled. Creatures under the '
                                        'effect of this spell can take no actions except to make a Magic save vs. DL11 '
@@ -248,7 +242,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                        'spell. Any creature actively avoiding the casters gaze gets a +10 bonus to the '
                                        'Magic save to avoid its effects.  A rank 7 or better caster can cast this '
                                        'spell once per encounter',
-                        'duration': 'Instantaneous',
+                        'duration': 'Persistent',
                         'frequency': 'This spell can be cast once per day.',
                         'prerequisite': 'Magic Aspect D8',
                         'spell_components': ['I', 'O']},
@@ -356,10 +350,10 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                            'with spells unless the target takes a long rest (8+ hours). This spell can only be used '
                            'once per encounter.',
             'duration': 'Persistent',
-            'frequency': '',
+            'frequency': 'This spell can only be used once per encounter.',
             'material_component': '1,000GP Magic Dust',
             'prerequisite': 'Magic Aspect D12',
-            'spell_components': ['I', 'S']},
+            'spell_components': ['I', 'S', 'MC']},
  'GENTLE LANDING': {'area_of_effect': 'The Caster or one other target',
                     'description': 'Choose either the caster or one other target within sight. A falling creature’s '
                                    'rate of descent slows to 60 feet per round for a number of rounds equal to the '
@@ -395,7 +389,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                     'caster chooses. A rank 7 or higher caster can cast this spell once per encounter '
                                     'per target. This spell can only be used once per encounter.',
                      'duration': 'Instantaneous',
-                     'frequency': '',
+                     'frequency': 'This spell can only be used once per encounter.',
                      'prerequisite': 'Magic Aspect D4',
                      'spell_components': ['E', 'I', 'O', 'S']},
  'GREATER MASS HEALING': {'area_of_effect': 'A Single or Multiple Creatures',
@@ -423,9 +417,9 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                           'used by the end of the casters next turn',
            'duration': 'Persistent',
            'frequency': 'Can be cast once per encounter but only once per day on any character.',
-           'material_component': '1 Gold Dragon Eyeball',
+            'material_component': '1 Gold Dragon Eyeball',
            'prerequisite': 'Magic Aspect D12',
-           'spell_components': ['I', 'S']},
+           'spell_components': ['I', 'S', 'MC']},
  'HEALALL': {'area_of_effect': 'The Casters Line of Vision',
              'description': 'Restores its die in hit points multiplied by caster rank to one person the caster '
                             'chooses. A rank 7 or higher caster can cast this spell once per encounter',
@@ -501,7 +495,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                'roll',
                 'duration': 'Persistent',
                 'frequency': 'This spell can be cast once per encounter.',
-                'prerequisite': 'Magic Aspect D8',
+                        'prerequisite': 'Magic Aspect D10',
                 'spell_components': ['I', 'O']},
  'INCORPOREAL': {'area_of_effect': 'The Caster Duration: Non-Persistent',
                  'description': 'Allows the caster to make themselves and any gear they are carrying incorporeal '
@@ -530,19 +524,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                     'frequency': 'This spell can be cast once per day.',
                     'prerequisite': 'Magic Aspect D6',
                     'spell_components': ['O', 'S']},
- 'INVISIBILITY': {'area_of_effect': 'A Single or Multiple Willing Creatures',
-                  'description': 'Can be cast on one or several willing creatures, making it impossible for them to be '
-                                 'seen by normal means, at the cost of 4 points rolled per creature with a minimum of '
-                                 'one and a maximum of 3. Although attacking an enemy while invisible will always '
-                                 'grant one automatic hit (two if the character dual wields), it will also immediately '
-                                 'end the invisibility spell for that person. This spell does not grant any extra '
-                                 'attacks or actions beyond the automatic hit with the first set of attacks. This '
-                                 'spell lasts a number of rounds equal to the spell roll on each target.',
-                  'duration': 'Persistent',
-                  'frequency': 'Can be cast once per encounter.',
-                  'material_component': '1 Vial of Medusa Blood',
-                  'prerequisite': 'Magic Aspect D12',
-                  'spell_components': ['I', 'O', 'S']},
+ 
  'INVISIBILTY': {'area_of_effect': 'A Single or Multiple Willing Creatures',
                  'description': 'Can be cast on one or several willing creatures, making it impossible for them to be '
                                 'seen by normal means, at the cost of 4 points rolled per creature with a minimum of '
@@ -555,7 +537,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                  'frequency': 'Can be cast once per encounter.',
                  'material_component': '1 Vial of Medusa Blood',
                  'prerequisite': 'Magic Aspect D12',
-                 'spell_components': ['I', 'O', 'S']},
+                 'spell_components': ['I', 'O', 'S', 'MC']},
  'IRISH': {'area_of_effect': 'A Single or Multiple Creatures',
            'description': 'This spell allows the caster access to a pool of points that can be applied to any rolls '
                           'the caster makes with the exception of Death saves equal to the gear die rolled. These '
@@ -587,9 +569,9 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
               'frequency': 'This spell can be cast once per encounter.',
               'prerequisite': 'Magic Aspect D6',
               'spell_components': ['I', 'O', 'S']},
- 'LIGHTNING': {'area_of_effect': 'A Single or Multiple',
-               'description': 'Creatures Does its gear die in damage to all opponents the caster can see. A rank 7 or '
-                              'better caster can cast this every round',
+ 'LIGHTNING': {'area_of_effect': 'A Single or Multiple Creatures',
+               'description': 'Does its gear die in damage to all opponents the caster can see. A rank 7 or better '
+                              'caster can cast this every round',
                'duration': 'Instantaneous',
                'frequency': 'Can be cast every other round.',
                'prerequisite': 'Magic Aspect D8',
@@ -603,15 +585,14 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
             'spell_components': ['I', 'O', 'S']},
  'LUCK': {'area_of_effect': 'A Single or Multiple Creatures',
           'description': "Allows you to add your gear die to another person's melee/ranged attack or damage roll, "
-                         'before they make it! It can also be used to reduce an opponent’s roll by the same amount, '
+                         'before they make it. It can also be used to reduce an opponent’s roll by the same amount, '
                          'before they make it. Any luck must be used by the target by the end of the original casters '
                          'next turn. If used against an opponent, the original caster must declare his intention to '
                          'use it BEFORE the opponent acts and the target gets a magic save to resist the effect. A '
                          'rank 7 or better caster can affect a number of creatures equal to the gear die roll. This '
-                         'spell cannot be used in combination with Enhancement or Metamagic. Can be cast once per '
-                         'encounter. Luck of the',
+                         'spell cannot be used in combination with Enhancement or Metamagic.',
           'duration': 'Persistent',
-          'frequency': 'This spell can be cast once per day.',
+          'frequency': 'Can be cast once per encounter.',
           'prerequisite': 'Magic Aspect D10',
           'spell_components': ['I', 'O', 'S']},
  'LUCK OF THE IRISH': {'area_of_effect': 'The Caster',
@@ -697,9 +678,9 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                               'again on the casters next round as a free action',
                'duration': 'Persistent',
                'frequency': 'This spell can be cast once per day.',
-               'material_component': '1 IIlithid Tentacle',
+               'material_component': '1 Illithid Tentacle',
                'prerequisite': 'Magic Aspect D12',
-               'spell_components': ['I', 'O']},
+               'spell_components': ['I', 'O', 'MC']},
  'MIRROR IMAGE': {'area_of_effect': 'The Casters Line of Vision',
                   'description': 'Conjures one exact duplicate of the caster per rank. The images occupy the nearest '
                                  'squares to the caster. The caster can control how many images are created, however, '
@@ -708,14 +689,13 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                  'this. Anyone attacking the character has a 50% chance to hit the character, (Below '
                                  '51 hits an image), otherwise they hit an image instead and that image dissipates. '
                                  'The spell lasts a number of rounds equal to the gear die roll. This spell may not be '
-                                 'used in conjunction with Burrow or Displacement. This spell may be cast once per '
-                                 'encounter. More is',
+                                 'used in conjunction with Burrow or Displacement.',
                   'duration': 'Persistent',
-                  'frequency': 'This spell can be cast once per day.',
+                  'frequency': 'This spell may be cast once per encounter.',
                   'material_component': '1 Piece of Mummy Bandage',
                   'prerequisite': 'Magic Aspect D12',
-                  'spell_components': ['I', 'S']},
- 'MORE IS ALWAYS BETTER': {'area_of_effect': 'A Single or Multiple Creatures',
+                  'spell_components': ['I', 'S', 'MC']},
+ 'MORE IS ALWAYS BETTER': {'area_of_effect': 'The Caster or One Ally',
                            'description': 'This spell allows the caster to give the target an additional pair of arms. '
                                           'The effect lasts for a number of rounds equal to the gear die rolled. The '
                                           'target gets an extra attack action as a benefit. If the target does not '
@@ -723,11 +703,12 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                           'Improvised Weapon attack with those arms as though they had the Improvised '
                                           'Weapon ability. If the target already has the improvised weapon ability, '
                                           'the additional arm attacks would instead be at 1d6 damage. A rank 7 or '
-                                          'better caster can cast this spell once per encounter.',
+                                          'better caster can cast this spell once per day.',
                            'duration': 'Persistent',
-                           'frequency': 'This spell can be cast once per encounter.',
-                           'prerequisite': 'Magic Aspect D8',
-                           'spell_components': ['I']},
+                           'frequency': 'This spell can be cast once per day.',
+                           'material_component': '1 Giant Octopus Tentacle',
+                           'prerequisite': 'Magic Aspect D12',
+                           'spell_components': ['I', 'MC']},
  'MUTABLE FORM': {'area_of_effect': 'A Single or Multiple Creatures',
                   'description': 'This spell allows the recipient to assume a mutable form that makes the target '
                                  'immune from critical hits for a number of rounds equal to the gear die rolled. A '
@@ -789,7 +770,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                     'frequency': 'This spell can be cast once per encounter.',
                     'material_component': '1 Angels Wing Feather',
                     'prerequisite': 'Magic Aspect D12',
-                    'spell_components': ['I', 'S']},
+                    'spell_components': ['I', 'S', 'MC']},
  'PARDON ME': {'area_of_effect': 'The Casters Line of Vision',
                'description': 'As a full round action, you attempt to interrupt an enemy spell caster from casting a '
                               'spell at you. You choose one target and a particular spell or spell like effect and if '
@@ -804,19 +785,8 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                'frequency': 'This spell can be cast once per encounter.',
                'material_component': '1 Pair of Rust Monster Antennae',
                'prerequisite': 'Magic Aspect D12',
-               'spell_components': ['I', 'S']},
- 'PERSON': {'area_of_effect': '2-14 Creatures',
-            'description': 'This spell allows the caster to compel the target to do their bidding. The target will not '
-                           'bring harm to themselves, but will obey any other verbal commands given to them for a '
-                           'number of rounds equal to the gear die rolled. All targets get a Magic save at the '
-                           'beginning of the original casters round to break the Charm effect with a DL of 11. The '
-                           'caster must remain within visual range of any targets and use a full round action to '
-                           'maintain the Charm. A rank 7 or higher caster can affect a number of targets equal to the '
-                           'gear die rolled and may use a Move Action to maintain the spell instead',
-            'duration': 'Instantaneous',
-            'frequency': 'This spell can be cast once per day.',
-            'prerequisite': 'Magic Aspect D10',
-            'spell_components': ['I', 'S']},
+               'spell_components': ['I', 'S', 'MC']},
+ 
  'PHANTOM WEAPON': {'area_of_effect': 'The Casters Line of Vision',
                     'description': 'Conjures a single one-handed weapon of the casters choice that does its gear die '
                                    'in damage to a single target upon a successful hit. The caster can use the phantom '
@@ -831,21 +801,21 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                    'will disappear. The spell lasts a number of rounds equal to the gear die roll. '
                                    'Spell may be cast once per encounter.',
                     'duration': 'Non-Persistent',
-                    'frequency': '',
+                    'frequency': 'This spell may be cast once per encounter.',
                     'prerequisite': 'Magic Aspect D8',
                     'spell_components': ['I', 'S']},
  'POLYMORPH SELF': {'area_of_effect': 'The Caster or One other Ally',
                     'description': 'Allows the caster to assume the shape of any non-unique creature that the caster '
                                    'has personally seen up to a size of medium. On a roll of 7-8 the caster can assume '
                                    'the form of a large creature, 9-10 a Huge creature and 11-12, an Enormous '
-                                   'creature. The caster gains none of the assumed creature’s abilities, simply the '
-                                   'look of the creature and extended reach. At rank 7 or higher, the caster can '
-                                   'affect one other target. Spell lasts for 1 hour or until dispelled',
+                                   'creature. The caster gains all the assumed creature’s abilities. At rank 7 or '
+                                   'higher, the caster can affect one other target. Spell lasts for 1 hour or until '
+                                   'dispelled',
                     'duration': 'Persistent',
-                    'frequency': 'Can be cast once per encounter.',
-                    'material_component': '1 Vial of Demon Blood',
+                    'frequency': 'Can be cast once per day per character.',
+                    'material_component': '1 Vial of Blood of the Creature Polymorphed Into',
                     'prerequisite': 'Magic Aspect D12',
-                    'spell_components': ['I', 'O', 'S']},
+                    'spell_components': ['I', 'O', 'S', 'MC']},
  'PRAY FOR THE DYING': {'area_of_effect': 'Touch',
                         'description': 'This spell allows the caster to take a full round action and touch an ally who '
                                        'is at zero or less hit points and has yet to make a death save. This touch '
@@ -1071,7 +1041,6 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                'rations and water for a number of persons equal to the gear die rolled.',
                 'duration': 'Persistent',
                 'frequency': 'This spell can be cast once per day.',
-                'material_component': '1 Carrion Crawler Tentacle',
                 'prerequisite': 'Magic Aspect D4',
                 'spell_components': ['O', 'S']},
  'TAKE THAT': {'area_of_effect': 'Within 30 feet',
@@ -1094,8 +1063,9 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                               'is forever lost',
                'duration': 'Persistent',
                'frequency': 'This spell can be cast once per day.',
+                'material_component': '1 Carrion Crawler Tentacle',
                'prerequisite': 'Magic Aspect D4',
-               'spell_components': ['I', 'S']},
+                'spell_components': ['I', 'S', 'MC']},
  'TELEKINESIS': {'area_of_effect': 'The Casters Line of Vision',
                  'description': 'Allows the caster to move one small object up to about 10lbs in weight about at a '
                                 'rate of 5 feet per round. These objects cannot be used as weapons. This spell lasts a '
@@ -1145,7 +1115,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                             'frequency': 'This spell can be cast once per week.',
                             'material_component': '1 Pair of Giant Spider Fangs',
                             'prerequisite': 'Magic Aspect D12',
-                            'spell_components': ['I', 'O', 'S']},
+                            'spell_components': ['I', 'O', 'S', 'MC']},
  'WALL OF ICE': {'area_of_effect': 'See Below',
                  'description': 'Creates a large wall of ice equal to one 20x10x5 cube plus an additional 5 foot in '
                                 'length per caster rank, the wall lasts a number of rounds equal to the gear die roll '
@@ -1159,22 +1129,21 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                  'prerequisite': 'Magic Aspect D10',
                  'spell_components': ['I', 'O', 'S']},
  'WEB': {'area_of_effect': '10x10 per gear die assigned (10x10 for a D4, 20x20 for a D6,',
-         'description': 'etc.) Creates a layered mass of strong, sticky strands. These masses must be anchored to two '
-                        'or more solid and diametrically opposed points or else the web collapses upon itself and '
-                        'disappears. Creatures caught within a web become stuck (including allies). Attacking a '
-                        'creature in a web won’t cause you to become entangled. Anyone in the effect’s area when the '
-                        'spell is cast must make a Magic save. If this save fails, the target(s) take on the Entangled '
-                        'condition. An Entangled creature may take a full round action to break free from the Web on '
-                        'their turn by making a Magic save of 17 or better, failure results in remaining stuck until '
-                        'their next turn. The caster must take a standard/attack action to maintain the spell on '
-                        'his/her turn; otherwise the webs dissipate at the end of the casters turn. This spell may be '
-                        'cast once per day. What the',
-         'duration': 'Persistent',
-         'frequency': 'This spell can be cast once per encounter per target.',
-         'material_component': '1 Gorgon Horn',
-         'prerequisite': 'Magic Aspect D8',
-         'spell_components': ['I', 'O']},
- 'WHAT THE HECK WAS THAT': {'area_of_effect': 'A Single or Multiple Creatures',
+     'description': 'etc.) Creates a layered mass of strong, sticky strands. These masses must be anchored to two '
+            'or more solid and diametrically opposed points or else the web collapses upon itself and '
+            'disappears. Creatures caught within a web become stuck (including allies). Attacking a '
+            'creature in a web won’t cause you to become entangled. Anyone in the effect’s area when the '
+            'spell is cast must make a Magic save. If this save fails, the target(s) take on the Entangled '
+            'condition. An Entangled creature may take a full round action to break free from the Web on '
+            'their turn by making a Magic save of 17 or better, failure results in remaining stuck until '
+            'their next turn. The caster must take a standard/attack action to maintain the spell on '
+            'his/her turn; otherwise the webs dissipate at the end of the casters turn. This spell may be '
+            'cast once per day.',
+     'duration': 'Persistent',
+     'frequency': 'This spell may be cast once per day.',
+     'prerequisite': 'Magic Aspect D8',
+     'spell_components': ['I', 'O']},
+ 'WHAT THE HECK WAS THAT': {'area_of_effect': 'The Caster or One Ally',
                             'description': 'This spell allows the recipient to make a single Warrior Melee attack '
                                            'against all creatures that the recipient can see equal to the gear die of '
                                            'the spell regardless of how far away the target(s) are. The recipient will '
@@ -1185,10 +1154,11 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                            'ends. The effect must be used by the end of the recipients next turn after '
                                            'casting or it is simply lost. A rank 7 or better caster can affect two '
                                            'allies per casting.',
-                            'duration': 'Instantaneous',
-                            'frequency': 'This spell can be cast once per encounter.',
-                            'prerequisite': 'Magic Aspect D8',
-                            'spell_components': ['I', 'S']},
+                            'duration': '1 Round',
+                            'frequency': 'This spell can be cast once per encounter per target.',
+                            'material_component': '1 Gorgon Horn',
+                            'prerequisite': 'Magic Aspect D12',
+                            'spell_components': ['I', 'S', 'MC']},
  'WHISPER IN THE WIND': {'area_of_effect': 'The Casters Line of Vision',
                          'description': 'This spell allows the caster to choose any one ally within line of sight and '
                                         'communicate a message in a whispery voice that only the target can hear. The '
@@ -1216,7 +1186,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                      'frequency': 'This spell can be cast once per encounter.',
                      'material_component': '1 Piece of a Lich’s Phylactery',
                      'prerequisite': 'Magic Aspect D8',
-                     'spell_components': ['I', 'O', 'S']},
+                     'spell_components': ['I', 'O', 'S', 'MC']},
  "YOU'RE NOT SO TOUGH": {'area_of_effect': 'The Caster or One Ally',
                          'description': 'This spell allows the caster to grant themselves or one ally the ability to '
                                         'do extra damage to targets larger than them. For each size category above the '
@@ -1238,7 +1208,7 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                     'frequency': 'This spell can be cast once per day.',
                     'material_component': "1 Piece of a Lich's Phylactery",
                     'prerequisite': 'Magic Aspect D12',
-                    'spell_components': ['I', 'S']},
+                    'spell_components': ['I', 'S', 'MC']},
  "YOU'RE WELCOME": {'area_of_effect': 'One ally',
                     'description': "Allows the caster to take ½ of the allies' damage for a number of rounds equal to "
                                    'the gear die roll. A rank 7 or higher caster can elect to take all damage instead. '
@@ -1259,12 +1229,168 @@ SPELLS = {'ACID RAIN': {'area_of_effect': 'One or more connected 5-foot squares.
                                   'affect a number of targets equal to the gear die rolled.')}
 }
 
+# Material Components overrides sourced from 'SPELL COMPONENTS LIST.vb'.
+# This mapping is applied at import time to keep spells.py in sync.
+MATERIAL_COMPONENTS_OVERRIDES = {
+    'ACID RAIN': '1oz. Gelatinous Cube',
+    'ALLS CLEAR': 'A Blank Parchment',
+    'ANALYZE': '1 50GP Pearl',
+    'ANIMATE OBJECT': '1oz. Spider Venom',
+    'BURIED ALIVE': '1oz. Quartz Stone',
+    'BLINDNESS': '1 Pair Broken Eyeglasses',
+    'BURROW': '1 Claw from an Umber Hulk',
+    'CHAIN LIGHTNING': '1 Piece of Bark from a Tree Struck by Lightning',
+    'CHARM MONSTER/PERSON': '1 oz. Perfume',
+    'COME TO ME': '1 Small Silver Mirror',
+    'COMFORT': '1 Bead of Glass',
+    'COMMON KNOWLEDGE': '1 oz. Straw',
+    'CREATE PORTAL': '1 Golden Needle',
+    'DAZZLE': '1 Amber Rod',
+    'DEAFNESS': '1 Black Onyx Stone',
+    'DEATH': '1 Vampires Fang',
+    'DISADVANTAGED': '1 Ruby',
+    'DISPLACEMENT': '1 Small Ivory Statue',
+    'DOWN THE DRAIN': '1 Glass Eye',
+    'DRAGON BREATH': '1 Dragon Scale',
+    "DUDE YOU'RE STONED": '1 Polished Marble Stone',
+    'ENHANCEMENT': '1 Owl Bear Feather',
+    'ENLARGE': '1oz. Giant Rat Bile',
+    'ENRAGE': '1oz. Mercury',
+    'ENTANGLE': '1 Roper Tentacle',
+    'EYE SEE YOU': '1 Undead Eyeball',
+    'FEARFUL PRESENCE': '1 Owlbear Claw',
+    'FIREBALL': '1oz. Guano and 1oz. Sulfur',
+    'FLY': '1 Griffon Feather',
+    'FORGET': '1,000GP Magic Dust',
+    'GENTLE LANDING': '1 Owl Feather',
+    'GOTTA HAVE IT': '1 Hydra Claw',
+    'GREASE': '1oz. Animal Fat',
+    'GREATER HEALING': None,
+    'GREATER MASS HEALING': None,
+    'HAIL STORM': '1 Shark Dorsal Fin',
+    'HASTE': '1 Gold Dragon Eye',
+    'HEALALL': None,
+    'HEALING': None,
+    'HEROISM': '1 Piece Troll Skin',
+    'I DARE YOU TO': '1oz. Basilisk Bile',
+    'ICY BLAST': '1oz. Centipede Venom',
+    'ILLUSION': '1 Vial Snake Venom',
+    'IMMOBILIZE': '1 Crocodile Tooth',
+    'INCORPOREAL': '1oz. Crushed Ettin Bone',
+    'INSPIRE': '1 Harpy Claw',
+    'INSTANT SEARCH': '1oz. Fine Wine',
+    'INVISIBILITY': '1 Vial of Medusa Blood',
+    'LESSEN EFFECT': None,
+    'LEVITATE': '1 Orc Bone',
+    'LOCKED': '1 Small Padlock',
+    'LUCK': '1oz. Treant Bark',
+    'LUCK OF THE IRISH': '1 Treant Leaf',
+    'MAGICAL DARKNESS': '1 8oz. Obsidian Stone',
+    'MAGICAL LIGHT': '1 8oz. Pumice Stone',
+    'MAGIC MISSILE': None,
+    'MAGIC SHIELD': '1 Piece of a Shield Broken in Battle',
+    'MAGICAL SIGHT': '1 Small Magnifying Lens',
+    'MASS HEALING': None,
+    'METAMAGIC': '1 Illithid Tentacle',
+    'MIRROR IMAGE': '1 Piece of Mummy Bandage',
+    'MORE IS ALWAYS BETTER': '1 Giant Octopus Tentacle',
+    'MUTABLE FORM': '1 Piece of Mimic Pseudopod',
+    'NATURES STEP': '1 Sprig Mistletoe',
+    'NIGHT VISION': '1 Black Silk Square',
+    'OBSCURE LIFE FORCE': '1 Black Pearl',
+    'ODORLESS': '1oz. Beaver Castor',
+    'OPEN': '1 Small Broken Padlock',
+    'PARALYZING RAY': '1 Angels Wing Feather',
+    'PURIFY': None,
+    'PURIFY AREA': None,
+    'REACH OUT': '1 Bow String',
+    'REPEL UNDEAD': '1 Piece Ghoul Flesh',
+    'REPULSION': '1 Piece Manticore Tongue',
+    'RIGHT BACK AT YOU': '1 Vial Unholy Water',
+    'ROOTED': '1 Piece Oak Tree Root',
+    'SHRINK': '1 Piece Lizard Skin',
+    'SILENCE': '1 Piece Ochre Jelly Pseudopod',
+    'SLEEP': '1 Manticore Tail Spike',
+    "SO THAT'S IT": "1 Beholders Eye Stalk",
+    'SONIC BOOM': '1 Piece Granite',
+    'SPECTRAL SERVANT': None,
+    'SPEED': '1 Small Turquoise Gem',
+    'SPIDER CLIMB': '1 Vial Spider Silk',
+    'SPIRITUAL HELPER': None,
+    'SUMMON SPIRITUAL STEED': '1 Handful Horse Hair',
+    'SUMMON SWARM': '1 Square Finest Velvet',
+    'SUSTENANCE': None,
+    'TAKE THAT': '1 Carrion Crawler Tentacle',
+    'TELEKINESIS': '1 Small Magnet',
+    'TELEPORT': '1 Amber Pendant',
+    "THAT'S NASTY": '1 Flask Mercury',
+    'THAT HURTS': '1 Small Piece Mithral',
+    'THE FORECAST CALLS FOR': '1 Pair of Giant Spider Fangs',
+    'WALL OF ICE': '1 Oz. Platinum Dust',
+    'WEB': '1 Silk Cloak',
+    'WHAT THE HECK WAS THAT': '1 Gorgon Horn',
+    'WHISPER IN THE WIND': '1 Hand Fan',
+    'WONDROUS EFFECT': '1oz. Ground Jade Dust',
+    "YOU'RE NOT SO TOUGH": '1oz. Crushed Dragon Shells',
+    "YOU'RE SPECIAL": '1 Piece of a Lich’s Phylactery',
+    "YOU'RE WELCOME": '1 Molted Snake Skin',
+}
+
+def _normalize_name(name: str) -> str:
+    if not isinstance(name, str):
+        return name
+    k = name.upper().strip()
+    # normalize curly quotes to straight for matching
+    k = k.replace('’', "'").replace('“', '"').replace('”', '"')
+    return k
+
+def _find_spell_key(spell_name: str):
+    n = _normalize_name(spell_name)
+    # direct match
+    if n in SPELLS:
+        return n
+    # known alias/misspelling corrections
+    aliases = {
+        'INVISIBILITY': 'INVISIBILTY',
+        "THAT'S NASTY": 'THAT’S NASTY',
+        "YOU'RE NOT SO TOUGH": "YOU'RE NOT SO TOUGH",
+        "SO THAT'S IT": 'SO THAT’S IT',
+    }
+    if n in aliases and aliases[n] in SPELLS:
+        return aliases[n]
+    # fuzzy: compare normalized forms of existing keys
+    for key in SPELLS.keys():
+        if _normalize_name(key) == n:
+            return key
+    return None
+
+# Apply overrides: add/remove material_component and MC flag consistently
+for _name, _mat in MATERIAL_COMPONENTS_OVERRIDES.items():
+    key = _find_spell_key(_name)
+    if not key:
+        continue
+    spell = SPELLS[key]
+    comps = spell.get('spell_components', [])
+    if _mat is None or (_is_none := isinstance(_mat, str) and _mat.strip().lower() == 'none'):
+        # remove material and MC
+        spell.pop('material_component', None)
+        if 'MC' in comps:
+            comps = [c for c in comps if c != 'MC']
+            spell['spell_components'] = comps
+    else:
+        # set/replace material and ensure MC present
+        spell['material_component'] = _mat
+        if 'MC' not in comps:
+            comps.append('MC')
+            spell['spell_components'] = comps
+
 # Component type definitions
 COMPONENT_TYPES = {
     "E": "Elemental",
     "I": "Incantation", 
     "O": "Occult",
-    "S": "Somatic"
+    "S": "Somatic",
+    "MC": "Material Component"
 }
 
 # Helper functions
