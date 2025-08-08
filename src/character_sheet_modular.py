@@ -68,7 +68,7 @@ class CharacterSheetGUI:
                 'heroPoints': 0
             },
             'resources': {
-                'money': 0,
+                'gold': 50,
                 'magicDust': 0
             },
             'magicItems': [],
@@ -556,6 +556,17 @@ class CharacterSheetGUI:
                 with open(file_path, 'r') as f:
                     load_data = json.load(f)
                 
+                # Migrate older saves that used resources.money -> resources.gold
+                try:
+                    resources = load_data.get('resources', {})
+                    if isinstance(resources, dict):
+                        if 'gold' not in resources and 'money' in resources:
+                            resources['gold'] = resources.get('money', 0)
+                            # do not delete 'money' to keep backward compatibility with older tabs/tools
+                            load_data['resources'] = resources
+                except Exception:
+                    pass
+                
                 # Update character data
                 self.character_data.update(load_data)
                 
@@ -682,7 +693,7 @@ class CharacterSheetGUI:
                     'heroPoints': 0
                 },
                 'resources': {
-                    'money': 0,
+                    'gold': 50,
                     'magicDust': 0
                 },
                 'magicItems': [],
@@ -850,6 +861,38 @@ class CharacterSheetGUI:
             ('GRID', (0, 0), (-1, -1), 1, colors.black)
         ]))
         story.append(aspects_table)
+        story.append(Spacer(1, 12))
+        
+        # Resources (Gold, Magic Dust)
+        resources = data.get('resources', {})
+        # Backward compatibility: fall back to 'money' if 'gold' not present
+        gold_val = resources.get('gold')
+        if gold_val is None:
+            gold_val = resources.get('money', 0)
+        try:
+            gold_val = int(gold_val)
+        except Exception:
+            gold_val = 0
+        try:
+            dust_val = int(resources.get('magicDust', 0))
+        except Exception:
+            dust_val = 0
+        resources_info = [
+            ['Gold:', str(gold_val)],
+            ['Magic Dust:', str(dust_val)]
+        ]
+        resources_table = Table(resources_info, colWidths=[2*inch, 4*inch])
+        resources_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(resources_table)
         story.append(Spacer(1, 12))
         
         # Build the PDF

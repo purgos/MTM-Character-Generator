@@ -336,11 +336,11 @@ class BasicInfoTab:
         resources_frame = ttk.LabelFrame(frame, text="Resources")
         resources_frame.grid(row=8, column=0, columnspan=2, padx=5, pady=5, sticky='ew')
 
-        ttk.Label(resources_frame, text="Money:").grid(row=0, column=0, padx=5, pady=2)
+        ttk.Label(resources_frame, text="Gold:").grid(row=0, column=0, padx=5, pady=2)
         money_ctrl = ttk.Frame(resources_frame)
         money_ctrl.grid(row=0, column=1, padx=5, pady=2, sticky='w')
-        self.money_var = tk.IntVar(value=0)
-        # Non-editable display for current Money value
+        self.money_var = tk.IntVar(value=50)
+        # Non-editable display for current Gold value
         self.money_label = ttk.Label(money_ctrl, textvariable=self.money_var, width=8, anchor='e')
         self.money_label.pack(side='left', padx=(0, 6))
         # Step controls for add/subtract (default visually 0 and reset after use)
