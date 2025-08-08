@@ -1,7 +1,6 @@
 # Project dependencies for MTM Character Generator
 
 reportlab>=4.0.0
-tkinter
 
 # Add optional packages below if later used:
 # pandas
