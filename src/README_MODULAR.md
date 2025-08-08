@@ -128,6 +128,18 @@ python3 character_sheet_modular.py
 
 PDF export uses ReportLab and writes to a user-chosen path via a file dialog.
 
+### Build a Linux AppImage (optional)
+
+An AppImage packaging script is included.
+
+```bash
+bash packaging/appimage/build_appimage.sh
+```
+
+Notes:
+- Requires python3, pip, PyInstaller, and system tkinter (on Debian/Ubuntu: `sudo apt install python3-tk`).
+- First run will download `appimagetool`. Output is placed in `dist/`.
+
 ## 📝 Adding New Tabs
 
 1) Create `src/tabs/new_tab.py` with a class exposing a `.tab` Frame.
