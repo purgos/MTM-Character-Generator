@@ -13,6 +13,7 @@ from tabs.aspects_tab import AspectsTab
 from tabs.gear_die_tab import GearDieTab
 from tabs.inventory_tab import InventoryTab
 from tabs.abilities_tab import AbilitiesTab
+from tabs.encyclopedia_tab import EncyclopediaTab
 
 class CharacterSheetGUI:
     def __init__(self, root):
@@ -125,6 +126,7 @@ class CharacterSheetGUI:
         self.gear_die_tab = GearDieTab(self.notebook, self.character_data)
         self.inventory_tab = InventoryTab(self.notebook, self.character_data)
         self.abilities_tab = AbilitiesTab(self.notebook, self.character_data)
+        self.encyclopedia_tab = EncyclopediaTab(self.notebook, self.character_data)
         
         # Set up gear die tab reference in basic info tab
         self.basic_info_tab.gear_die_tab = self.gear_die_tab
@@ -144,6 +146,7 @@ class CharacterSheetGUI:
         self.notebook.add(self.gear_die_tab.tab, text="Gear Die")
         self.notebook.add(self.inventory_tab.tab, text="Inventory")
         self.notebook.add(self.abilities_tab.tab, text="Abilities")
+        self.notebook.add(self.encyclopedia_tab.tab, text="Encyclopedia")
         
         # Set up callbacks for rank updates
         self.basic_info_tab.total_rank_points_var.trace_add('write', self.on_rank_update)
@@ -811,4 +814,4 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
-    main() 
+    main()
