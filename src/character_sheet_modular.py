@@ -14,6 +14,7 @@ from tabs.gear_die_tab import GearDieTab
 from tabs.inventory_tab import InventoryTab
 from tabs.abilities_tab import AbilitiesTab
 from tabs.encyclopedia_tab import EncyclopediaTab
+from tabs.dice_roller_tab import DiceRollerTab
 
 class CharacterSheetGUI:
     def __init__(self, root):
@@ -127,6 +128,7 @@ class CharacterSheetGUI:
         self.inventory_tab = InventoryTab(self.notebook, self.character_data)
         self.abilities_tab = AbilitiesTab(self.notebook, self.character_data)
         self.encyclopedia_tab = EncyclopediaTab(self.notebook, self.character_data)
+        self.dice_roller_tab = DiceRollerTab(self.notebook, self.character_data)
         
         # Set up gear die tab reference in basic info tab
         self.basic_info_tab.gear_die_tab = self.gear_die_tab
@@ -147,6 +149,7 @@ class CharacterSheetGUI:
         self.notebook.add(self.inventory_tab.tab, text="Inventory")
         self.notebook.add(self.abilities_tab.tab, text="Abilities")
         self.notebook.add(self.encyclopedia_tab.tab, text="Encyclopedia")
+        self.notebook.add(self.dice_roller_tab.tab, text="Dice Roller")
         
         # Set up callbacks for rank updates
         self.basic_info_tab.total_rank_points_var.trace_add('write', self.on_rank_update)
@@ -477,7 +480,7 @@ class CharacterSheetGUI:
         """Save character data to JSON file"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            filetypes=[["JSON files", "*.json"], ["All files", "*.*"]]
         )
         if file_path:
             try:
@@ -519,7 +522,7 @@ class CharacterSheetGUI:
     def load_character(self):
         """Load character data from JSON file"""
         file_path = filedialog.askopenfilename(
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            filetypes=[["JSON files", "*.json"], ["All files", "*.*"]]
         )
         if file_path:
             try:
@@ -532,9 +535,11 @@ class CharacterSheetGUI:
                 # Update all tabs
                 self.basic_info_tab.set_data(load_data)
                 self.aspects_tab.set_data(load_data)
-                self.gear_die_tab.set_data(load_data)
+                self.gear_die_tab.set_data(load_data)  # ensure saved slots restored
                 self.inventory_tab.set_data(load_data)
                 self.abilities_tab.set_data(load_data)
+                # Also update dice roller's reference to character data
+                self.dice_roller_tab.set_data(self.character_data)
                 
                 # Check if character was locked when saved
                 character_locked = load_data.get('characterLocked', False)
@@ -565,6 +570,13 @@ class CharacterSheetGUI:
         self.aspects_tab.update_lock_state()
         
         # Lock gear die choices (only hitpoints, dodge, parry)
+        # Do NOT rebuild the tab here; rebuilding was dropping non-d4 slots in some cases.
+        # Instead, sync current slot counts back to character_data and lock in place.
+        try:
+            if hasattr(self, 'gear_die_tab') and hasattr(self.gear_die_tab, 'gear_die_slots'):
+                self.character_data['gearDieSlots'] = self.gear_die_tab.gear_die_slots.copy()
+        except Exception as _e:
+            print(f"[DEBUG] GearDie slot sync before lock failed: {_e}")
         self.gear_die_tab.lock_gear_die_choices()
         
         # Lock specialization if rank is 1 or higher
@@ -574,7 +586,7 @@ class CharacterSheetGUI:
             pass
         
         print(f"[DEBUG] Character locked silently - rank={current_rank}")
-
+    
     def lock_character(self):
         """Lock all lockable fields"""
         if messagebox.askyesno("Lock Character", 
@@ -665,12 +677,25 @@ class CharacterSheetGUI:
                 'selectedAbilities': []
             }
             
+            # Also ensure default gear die slots are stored in character_data
+            default_slots = {'d4': 2, 'd6': 1, 'd8': 1, 'd10': 1, 'd12': 1}
+            self.character_data['gearDieSlots'] = default_slots.copy()
+            
             # Reset all tabs
             self.basic_info_tab.set_data(self.character_data)
             self.aspects_tab.set_data(self.character_data)
             self.gear_die_tab.set_data(self.character_data)
             self.inventory_tab.set_data(self.character_data)
             self.abilities_tab.set_data(self.character_data)
+            # Update dice roller's reference as well
+            self.dice_roller_tab.set_data(self.character_data)
+            
+            # Rebuild Gear Die tab strictly from current rank (1) to guarantee the default sections are shown
+            try:
+                self.gear_die_tab.update_slots_for_rank(self.character_data.get('rank', 1))
+                print(f"[DEBUG] GearDie slots after reset: {self.gear_die_tab.gear_die_slots}")
+            except Exception as e:
+                print(f"[DEBUG] Failed to rebuild gear die slots on reset: {e}")
             
             # Fields remain unlocked since rank points are 0
 
@@ -678,7 +703,7 @@ class CharacterSheetGUI:
         """Print character sheet to PDF"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+            filetypes=[["PDF files", "*.pdf"], ["All files", "*.*"]]
         )
         if file_path:
             try:

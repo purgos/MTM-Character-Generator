@@ -34,6 +34,9 @@ class GearDieTab:
         # Clear existing content
         for widget in self.tab.winfo_children():
             widget.destroy()
+        
+        # Reset widget registry to avoid stale entries
+        self.allocation_widgets = {}
             
         # Create a scrollable frame
         canvas = tk.Canvas(self.tab)
@@ -104,15 +107,19 @@ class GearDieTab:
         """Create allocation sections for each die type"""
         # Create sections for each die type
         for die in ['d4', 'd6', 'd8', 'd10', 'd12']:
-            self.create_die_allocation_section(parent, die)
+            try:
+                self.create_die_allocation_section(parent, die)
+            except Exception as e:
+                print(f"[DEBUG] Error creating allocation section for {die}: {e}")
     
     def create_die_allocation_section(self, parent, die):
         """Create allocation section for a specific die type"""
         # Skip d4 if it's the free slot (we handle regular d4 slots separately)
         if die == 'd4':
-            num_slots = max(0, self.gear_die_slots[die] - 1)  # Subtract free slot
+            num_slots = max(0, self.gear_die_slots.get(die, 0) - 1)  # Subtract free slot
         else:
-            num_slots = self.gear_die_slots[die]
+            num_slots = int(self.gear_die_slots.get(die, 0) or 0)
+        print(f"[DEBUG] Building section for {die}: num_slots={num_slots}, gear_die_slots={self.gear_die_slots}")
         
         if num_slots <= 0:
             return
@@ -266,6 +273,12 @@ class GearDieTab:
             widgets['allocation_var'].set('hitpoints')
             allocation_type = 'hitpoints'
         
+        # Enforce that shields can only be assigned to D4 slots
+        if allocation_type == 'shield' and die != 'd4':
+            messagebox.showwarning("Invalid Slot", "Shields can only be placed in a D4 gear die slot.")
+            widgets['allocation_var'].set('hitpoints')
+            allocation_type = 'hitpoints'
+        
         # Hide/show appropriate widgets
         if allocation_type == 'spell':
             widgets['value_entry'].pack_forget()
@@ -273,15 +286,56 @@ class GearDieTab:
             self.update_spell_dropdown(widgets, die)
         else:
             widgets['spell_combo'].pack_forget()
-            widgets['value_entry'].pack(side='left', padx=2)
             
             if allocation_type == 'hitpoints':
+                # Ensure entry visible for hitpoints description
+                widgets['value_entry'].pack(side='left', padx=2)
                 # Set hitpoints value based on die
                 hp_values = {'d4': 2, 'd6': 3, 'd8': 4, 'd10': 5, 'd12': 6}
                 widgets['value_var'].set(str(hp_values[die]))
                 widgets['value_entry'].config(state='readonly')
                 widgets['desc_label'].config(text=f"Adds {hp_values[die]} hitpoints")
-            else:  # melee, ranged, shield, tower shield, armor, dodge, parry, or unarmed
+            elif allocation_type == 'shield':
+                # For shield, hide the value entry and show fixed rules text
+                widgets['value_entry'].pack_forget()
+                widgets['value_var'].set('')
+                shield_text = (
+                    "Shields are a special kind of armor. When combined with armor, a shield allows you to "
+                    "force your opponent to make two damage rolls when damaging you in combat, taking the "
+                    "lesser of the two results, however; the shield uses a D4 gear die slot. Shields may not "
+                    "be used with missile fire or two-handed weapons."
+                )
+                widgets['desc_label'].config(text=shield_text)
+            elif allocation_type == 'armor':
+                # For armor, hide the value entry and show fixed rules text
+                widgets['value_entry'].pack_forget()
+                widgets['value_var'].set('')
+                # Armor category header depends on die
+                if die in ['d4', 'd6']:
+                    armor_header = (
+                        "Light Armor + 0 (Padded Armor, Leather Armor, Studded Leather, Hide), "
+                        "limited to Gear Die D4 and D6"
+                    )
+                elif die in ['d8', 'd10']:
+                    armor_header = (
+                        "Medium Armor + 1 (Chain Shirt, Breastplate, Half-Plate), "
+                        "limited to Gear Die D8 and D10"
+                    )
+                else:  # d12 and any higher defaults
+                    armor_header = (
+                        "Heavy Armor +2 (Ring Mail, Chain Mail, Splint Mail, Full Plate), "
+                        "limited to Gear Die D12"
+                    )
+                armor_text = (
+                    "Armor reduces damage taken by a number from two twelve. Each melee or missile fire damage roll "
+                    "to a character wearing armor is potentially reduced by two to twelve points. The affected character "
+                    "will roll a D20 armor check against each attack and consult the chart above. Damage is always rounded down "
+                    "for attacks against the PC’s and up for attacks against NPC’S/Monsters. Minimum damage is either 1 (or two "
+                    "if a critical hit or three if Improved Critical)."
+                )
+                widgets['desc_label'].config(text=f"{armor_header}\n\n{armor_text}")
+            else:  # melee, ranged, tower shield, dodge, parry, or unarmed
+                widgets['value_entry'].pack(side='left', padx=2)
                 widgets['value_entry'].config(state='normal')
                 widgets['value_var'].set('')
                 widgets['desc_label'].config(text=f"Enter {allocation_type} bonus value")
@@ -314,8 +368,8 @@ class GearDieTab:
         # Base options (excluding spell - will add conditionally)
         options = ['hitpoints']
         
-        # Add shield only if unarmed combat is not selected
-        if not unarmed_combat:
+        # Add shield only if unarmed combat is not selected AND the die is d4
+        if not unarmed_combat and die == 'd4':
             options.append('shield')
         
         # Add tower shield only if unarmed combat is not selected and die is d4
@@ -519,6 +573,7 @@ class GearDieTab:
         if rank >= 11:
             self.gear_die_slots['d12'] += 2
         
+        print(f"[DEBUG] update_slots_for_rank({rank}) -> {self.gear_die_slots}")
         # Update character data
         self.character_data['gearDieSlots'] = self.gear_die_slots.copy()
         
@@ -574,9 +629,34 @@ class GearDieTab:
         # Update character data
         self.character_data.update(data)
         
-        # Update slots for current rank
-        current_rank = self.character_data.get('rank', 1)
-        self.update_slots_for_rank(current_rank)
+        # Prefer saved slots if provided to avoid visual slot resets on load/lock
+        if 'gearDieSlots' in data and isinstance(data['gearDieSlots'], dict):
+            # Normalize and validate saved slots
+            raw = data['gearDieSlots']
+            saved = {}
+            for k in ['d4', 'd6', 'd8', 'd10', 'd12']:
+                v = raw.get(k, 0)
+                try:
+                    v = int(v)
+                except Exception:
+                    v = 0
+                saved[k] = v
+            # If any non-d4 slot is < 1, rebuild from rank baseline
+            current_rank = self.character_data.get('rank', 1)
+            invalid = any(saved[k] < 1 for k in ['d6', 'd8', 'd10', 'd12']) or saved['d4'] < 2
+            if invalid:
+                print(f"[DEBUG] set_data detected invalid gearDieSlots {saved}; rebuilding from rank {current_rank}")
+                self.update_slots_for_rank(current_rank)
+            else:
+                self.gear_die_slots = saved
+                print(f"[DEBUG] set_data using provided gearDieSlots -> {self.gear_die_slots}")
+                # Recreate the tab with these saved slots
+                self.create_tab()
+        else:
+            # Update slots for current rank (fallback)
+            current_rank = self.character_data.get('rank', 1)
+            print(f"[DEBUG] set_data no gearDieSlots provided; rebuilding from rank {current_rank}")
+            self.update_slots_for_rank(current_rank)
         
         # Load free slot data if available
         if hasattr(self, 'free_slot_var'):
@@ -586,7 +666,7 @@ class GearDieTab:
         if 'gearDieAllocations' in data:
             allocations = data['gearDieAllocations']
             has_hitpoints = any(allocation.get('type') == 'hitpoints' for allocation in allocations.values())
-            if has_hitpoints:
+            if has_hitpoints and hasattr(self, 'notify_max_hp_update'):
                 self.notify_max_hp_update()
         
         # Handle lock state
@@ -650,4 +730,4 @@ class GearDieTab:
         if hasattr(self, 'improvised_radio'):
             self.improvised_radio.config(state='normal')
         if hasattr(self, 'unarmed_radio'):
-            self.unarmed_radio.config(state='normal') 
+            self.unarmed_radio.config(state='normal')
