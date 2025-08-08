@@ -11,7 +11,6 @@ MTM-Character-Generator/
 └── src/
     ├── character_sheet_modular.py  # Main application (tabs notebook)
     ├── README_MODULAR.md           # This file
-    ├── DAMAGE TABLES.md            # Reference tables (doc only)
     ├── spells.py                   # Reference data
     ├── magic_items.py              # Reference data
     ├── aspect_abilities.py         # Reference data
