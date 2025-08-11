@@ -24,13 +24,6 @@
 
 ### Linux
 
-### Method 1: AppImage
-
-1. Download AppImage file
-2. Execute AppImage file
-
-### Method 2: Python
-
 1. Install Python 3.12 or newer using your package manager (e.g., `sudo apt install python3.12`).
 2. Open a terminal and navigate to the project directory:
    ```sh
