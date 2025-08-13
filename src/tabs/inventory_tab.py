@@ -402,10 +402,14 @@ class InventoryTab:
         try:
             materials = self.character_data['inventory'].get('materials', [])
             self.materials_listbox.delete(0, tk.END)
+            comp_to_spells = getattr(self.materials_tab, 'component_to_spells', {}) or {}
             for m in materials:
+                comp_name = m.get('name', '')
+                spell_list = comp_to_spells.get(comp_name, [])
+                spell_suffix = f" [{', '.join(spell_list)}]" if spell_list else ''
                 cost_each = m.get('gold', '-')
                 cost_str = 'N/A' if cost_each in (None, 'N/A') else f"{cost_each}"
-                self.materials_listbox.insert(tk.END, f"{m.get('name','')} (x{m.get('quantity',1)}) - {cost_str}g each")
+                self.materials_listbox.insert(tk.END, f"{comp_name}{spell_suffix} (x{m.get('quantity',1)}) - {cost_str}g each")
         except Exception:
             pass
 
@@ -418,6 +422,20 @@ class InventoryTab:
         die = getattr(self.materials_tab, 'prereq_var', tk.StringVar(value='')).get().strip()
         cost_each = getattr(self.materials_tab, 'COST_BY_PREREQ', {}).get(die, None)
         cost_str = 'N/A' if cost_each is None else f"{cost_each}"
+        # Determine spell suffix to display
+        try:
+            mode = getattr(self.materials_tab, 'mode_var').get()
+        except Exception:
+            mode = 'spell'
+        spell_names = []
+        if mode == 'spell':
+            selected_spell = (self.mc_spell_var.get() or '').strip()
+            if selected_spell:
+                spell_names = [selected_spell]
+        if not spell_names:
+            comp_to_spells = getattr(self.materials_tab, 'component_to_spells', {}) or {}
+            spell_names = comp_to_spells.get(comp, [])
+        spell_suffix = f" [{', '.join(spell_names)}]" if spell_names else ''
         # Persist to character_data with quantity combining
         materials = self.character_data['inventory'].setdefault('materials', [])
         existing_idx = next((i for i, m in enumerate(materials) if m.get('name') == comp), None)
@@ -426,7 +444,13 @@ class InventoryTab:
             # Keep existing gold
             ex = materials[existing_idx]
             disp_cost = 'N/A' if ex.get('gold') in (None, 'N/A') else f"{ex.get('gold')}"
-            display = f"{ex.get('name','')} (x{ex.get('quantity',1)}) - {disp_cost}g each"
+            # Build display with spell suffix (use mapping for existing comp)
+            comp_name = ex.get('name', '')
+            if not spell_names:
+                comp_to_spells = getattr(self.materials_tab, 'component_to_spells', {}) or {}
+                spell_list = comp_to_spells.get(comp_name, [])
+                spell_suffix = f" [{', '.join(spell_list)}]" if spell_list else ''
+            display = f"{comp_name}{spell_suffix} (x{ex.get('quantity',1)}) - {disp_cost}g each"
             # Update listbox at same index
             if existing_idx < self.materials_listbox.size():
                 self.materials_listbox.delete(existing_idx)
@@ -437,7 +461,7 @@ class InventoryTab:
         else:
             new_gold = cost_each if cost_each is not None else 'N/A'
             materials.append({'name': comp, 'quantity': qty_int, 'gold': new_gold})
-            entry = f"{comp} (x{qty_int}) - {('N/A' if new_gold == 'N/A' else str(new_gold))}g each"
+            entry = f"{comp}{spell_suffix} (x{qty_int}) - {('N/A' if new_gold == 'N/A' else str(new_gold))}g each"
             self.materials_listbox.insert(tk.END, entry)
 
     def decrement_material_item(self):
@@ -464,7 +488,11 @@ class InventoryTab:
             item['quantity'] = qty_int
             cost_each = item.get('gold', '-')
             cost_str = 'N/A' if cost_each in (None, 'N/A') else f"{cost_each}"
-            display = f"{item.get('name','')} (x{qty_int}) - {cost_str}g each"
+            comp_name = item.get('name', '')
+            comp_to_spells = getattr(self.materials_tab, 'component_to_spells', {}) or {}
+            spell_list = comp_to_spells.get(comp_name, [])
+            spell_suffix = f" [{', '.join(spell_list)}]" if spell_list else ''
+            display = f"{comp_name}{spell_suffix} (x{qty_int}) - {cost_str}g each"
             lb.delete(idx)
             lb.insert(idx, display)
             lb.select_set(idx)

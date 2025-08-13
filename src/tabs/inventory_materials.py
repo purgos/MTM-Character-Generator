@@ -41,7 +41,8 @@ class InventoryMaterials:
         # Build list of spells requiring material components
         self.material_spells = self._collect_material_spells()
         # Also build a unique list of components -> representative die (max die across spells)
-        self.components_list, self.component_to_die = self._build_component_index()
+        # and a mapping of component -> spells that use it
+        self.components_list, self.component_to_die, self.component_to_spells = self._build_component_index()
 
         # UI state vars
         self.cost_each_var = tk.StringVar(value='-')
@@ -139,9 +140,10 @@ class InventoryMaterials:
         return items
 
     def _build_component_index(self):
-        # Aggregate dies per component
+        # Aggregate dies per component and track which spells use each component
         comp_dies = {}
-        for _, meta in self.material_spells:
+        comp_spells = {}
+        for name, meta in self.material_spells:
             comp = meta.get('component', '').strip()
             die = meta.get('prereq_die') or ''
             if not comp:
@@ -149,6 +151,7 @@ class InventoryMaterials:
             comp_dies.setdefault(comp, set())
             if die:
                 comp_dies[comp].add(die)
+            comp_spells.setdefault(comp, set()).add(name)
         # Choose the highest die per component to be conservative on cost
         order = {'D6': 1, 'D8': 2, 'D10': 3, 'D12': 4}
         comp_to_die = {}
@@ -158,7 +161,8 @@ class InventoryMaterials:
             else:
                 comp_to_die[comp] = max(dies, key=lambda d: order.get(d, 0))
         components = sorted(comp_to_die.keys())
-        return components, comp_to_die
+        comp_to_spells = {comp: sorted(list(spells)) for comp, spells in comp_spells.items()}
+        return components, comp_to_die, comp_to_spells
 
     def on_spell_selected(self, event=None):
         name = self.spell_var.get()
@@ -200,14 +204,31 @@ class InventoryMaterials:
             qty = 1
         cost_each = self.COST_BY_PREREQ.get(die, None)
         cost_str = 'N/A' if cost_each is None else f"{cost_each}"
-        entry = f"{comp} (x{qty}) - {cost_str}g each"
+        # Determine associated spell name(s) to show beside the component
+        spell_names = []
+        try:
+            mode = self.mode_var.get()
+        except Exception:
+            mode = 'spell'
+        if mode == 'spell':
+            selected_spell = (self.spell_var.get() or '').strip()
+            if selected_spell:
+                spell_names = [selected_spell]
+        if not spell_names:
+            spell_names = self.component_to_spells.get(comp, [])
+        spell_suffix = f" [{', '.join(spell_names)}]" if spell_names else ''
+
+        entry = f"{comp}{spell_suffix} (x{qty}) - {cost_str}g each"
 
         # If the component already exists in the list, update its quantity line; naive match by component name prefix
         lb = self.listbox
         found_idx = None
         for i in range(lb.size()):
             text = lb.get(i)
-            if text.startswith(comp + ' '):
+            # Compare by base component name (strip any spell suffix or quantity)
+            base = text.split(' [', 1)[0]
+            base = base.split(' (x', 1)[0]
+            if base == comp:
                 found_idx = i
                 break
         if found_idx is not None:
