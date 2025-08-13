@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+
 class InventoryMagicBag:
     def __init__(self, parent, item_var, quantity_var, add_callback, listbox):
         self.frame = ttk.Frame(parent)
@@ -15,6 +16,8 @@ class InventoryMagicBag:
             from src.equipment_list import equipment as equipment_data
         except ImportError:
             from equipment_list import equipment as equipment_data
+        # Build an index to access price/description by name
+        self.equipment_index = {item['name']: item for item in equipment_data}
         self.equipment_list = [(item['name'], item.get('price')) for item in equipment_data]
         self.equipment_list.append(("Custom...", None))
 
@@ -85,6 +88,13 @@ class InventoryMagicBag:
             gold = "-"
         else:
             gold = self.gold_var.get()
+        desc = self.get_description(item)
         qty = self.quantity_var.get()
-        entry = f"{item} (x{qty}) - {gold}g each"
+        entry = f"{item} - {desc} (x{qty}) - {gold}g each" if desc else f"{item} (x{qty}) - {gold}g each"
         self.listbox.insert(tk.END, entry)
+
+    def get_description(self, name: str) -> str:
+        try:
+            return (self.equipment_index.get(name) or {}).get('description', '') or ''
+        except Exception:
+            return ''

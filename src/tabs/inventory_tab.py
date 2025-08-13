@@ -217,7 +217,12 @@ class InventoryTab:
             items[existing_idx]['quantity'] = int(items[existing_idx].get('quantity', 1)) + qty_int
             # Keep existing gold value
             ex = items[existing_idx]
-            display = f"{ex.get('name','')} (x{ex.get('quantity',1)}) - {ex.get('gold','-')}g each"
+            try:
+                desc = (self.magic_bag_tab.equipment_index.get(ex.get('name','')) or {}).get('description', '') or ''
+            except Exception:
+                desc = ''
+            prefix = f"{ex.get('name','')} - {desc}" if desc else ex.get('name','')
+            display = f"{prefix} (x{ex.get('quantity',1)}) - {ex.get('gold','-')}g each"
             # Update listbox at same index
             if existing_idx < self.magic_listbox.size():
                 self.magic_listbox.delete(existing_idx)
@@ -227,7 +232,12 @@ class InventoryTab:
                 self.magic_listbox.insert(tk.END, display)
         else:
             items.append({'name': item, 'quantity': qty_int, 'gold': gold})
-            entry = f"{item} (x{qty_int}) - {gold}g each"
+            try:
+                desc = (self.magic_bag_tab.equipment_index.get(item) or {}).get('description', '') or ''
+            except Exception:
+                desc = ''
+            prefix = f"{item} - {desc}" if desc else item
+            entry = f"{prefix} (x{qty_int}) - {gold}g each"
             self.magic_listbox.insert(tk.END, entry)
 
     def add_elsewhere_item(self):
@@ -249,7 +259,12 @@ class InventoryTab:
         if existing_idx is not None:
             items[existing_idx]['quantity'] = int(items[existing_idx].get('quantity', 1)) + qty_int
             ex = items[existing_idx]
-            display = f"{ex.get('name','')} (x{ex.get('quantity',1)}) - {ex.get('gold','-')}g each @ {ex.get('location','')}"
+            try:
+                desc = (self.elsewhere_tab.equipment_index.get(ex.get('name','')) or {}).get('description', '') or ''
+            except Exception:
+                desc = ''
+            prefix = f"{ex.get('name','')} - {desc}" if desc else ex.get('name','')
+            display = f"{prefix} (x{ex.get('quantity',1)}) - {ex.get('gold','-')}g each @ {ex.get('location','')}"
             if existing_idx < self.elsewhere_listbox.size():
                 self.elsewhere_listbox.delete(existing_idx)
                 self.elsewhere_listbox.insert(existing_idx, display)
@@ -258,7 +273,12 @@ class InventoryTab:
                 self.elsewhere_listbox.insert(tk.END, display)
         else:
             items.append({'name': item, 'quantity': qty_int, 'gold': gold, 'location': location})
-            entry = f"{item} (x{qty_int}) - {gold}g each @ {location}"
+            try:
+                desc = (self.elsewhere_tab.equipment_index.get(item) or {}).get('description', '') or ''
+            except Exception:
+                desc = ''
+            prefix = f"{item} - {desc}" if desc else item
+            entry = f"{prefix} (x{qty_int}) - {gold}g each @ {location}"
             self.elsewhere_listbox.insert(tk.END, entry)
 
     def decrement_magic_item(self):
@@ -284,7 +304,12 @@ class InventoryTab:
             lb.delete(idx)
         else:
             item['quantity'] = qty_int
-            display = f"{item.get('name','')} (x{qty_int}) - {item.get('gold','-')}g each"
+            try:
+                desc = (self.magic_bag_tab.equipment_index.get(item.get('name','')) or {}).get('description', '') or ''
+            except Exception:
+                desc = ''
+            prefix = f"{item.get('name','')} - {desc}" if desc else item.get('name','')
+            display = f"{prefix} (x{qty_int}) - {item.get('gold','-')}g each"
             lb.delete(idx)
             lb.insert(idx, display)
             lb.select_set(idx)
@@ -311,7 +336,12 @@ class InventoryTab:
             lb.delete(idx)
         else:
             item['quantity'] = qty_int
-            display = f"{item.get('name','')} (x{qty_int}) - {item.get('gold','-')}g each @ {item.get('location','')}"
+            try:
+                desc = (self.elsewhere_tab.equipment_index.get(item.get('name','')) or {}).get('description', '') or ''
+            except Exception:
+                desc = ''
+            prefix = f"{item.get('name','')} - {desc}" if desc else item.get('name','')
+            display = f"{prefix} (x{qty_int}) - {item.get('gold','-')}g each @ {item.get('location','')}"
             lb.delete(idx)
             lb.insert(idx, display)
             lb.select_set(idx)
@@ -382,7 +412,13 @@ class InventoryTab:
             listbox.delete(0, tk.END)
             for item_data in self.character_data['inventory'][category]:
                 if category == 'elsewhere':
-                    entry = f"{item_data.get('name','')} (x{item_data.get('quantity',1)}) - {item_data.get('gold','-')}g each @ {item_data.get('location','')}"
+                    # Include description where available
+                    try:
+                        desc = (self.elsewhere_tab.equipment_index.get(item_data.get('name','')) or {}).get('description', '') or ''
+                    except Exception:
+                        desc = ''
+                    prefix = f"{item_data.get('name','')} - {desc}" if desc else item_data.get('name','')
+                    entry = f"{prefix} (x{item_data.get('quantity',1)}) - {item_data.get('gold','-')}g each @ {item_data.get('location','')}"
                 elif category == 'stored_magic':
                     # Use rich display like in BasicInfoTab
                     if 'quantity' in item_data and isinstance(item_data.get('quantity'), int):
@@ -395,7 +431,13 @@ class InventoryTab:
                             parts.append(f"Charges {item_data['current_charges']}/{item_data['max_charges']}")
                         entry = ' - '.join([p for p in parts if p])
                 else:
-                    entry = f"{item_data.get('name','')} (x{item_data.get('quantity',1)}) - {item_data.get('gold','-')}g each"
+                    # magic bag
+                    try:
+                        desc = (self.magic_bag_tab.equipment_index.get(item_data.get('name','')) or {}).get('description', '') or ''
+                    except Exception:
+                        desc = ''
+                    prefix = f"{item_data.get('name','')} - {desc}" if desc else item_data.get('name','')
+                    entry = f"{prefix} (x{item_data.get('quantity',1)}) - {item_data.get('gold','-')}g each"
                 listbox.insert(tk.END, entry)
 
         # Optional: if materials are stored in character_data, display them in the Materials listbox

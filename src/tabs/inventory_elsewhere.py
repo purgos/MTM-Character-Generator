@@ -16,6 +16,7 @@ class InventoryElsewhere:
             from src.equipment_list import equipment as equipment_data
         except ImportError:
             from equipment_list import equipment as equipment_data
+        self.equipment_index = {item['name']: item for item in equipment_data}
         self.equipment_list = [(item['name'], item.get('price')) for item in equipment_data]
         self.equipment_list.append(("Custom...", None))
 
@@ -90,7 +91,14 @@ class InventoryElsewhere:
             gold = "-"
         else:
             gold = self.gold_var.get()
+        desc = self.get_description(item)
         qty = self.quantity_var.get()
         location = self.location_var.get().strip() or "(No location)"
-        entry = f"{item} (x{qty}) - {gold}g each @ {location}"
+        entry = f"{item} - {desc} (x{qty}) - {gold}g each @ {location}" if desc else f"{item} (x{qty}) - {gold}g each @ {location}"
         self.listbox.insert(tk.END, entry)
+
+    def get_description(self, name: str) -> str:
+        try:
+            return (self.equipment_index.get(name) or {}).get('description', '') or ''
+        except Exception:
+            return ''
