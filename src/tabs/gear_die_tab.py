@@ -1,32 +1,39 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from spells import SPELLS
+from typing import Optional, Callable
 
 class GearDieTab:
+    # Callback type: a function taking no args and returning None
+    max_hp_callback: Optional[Callable[[], None]]
+
     def __init__(self, parent, character_data):
         self.parent = parent
         self.character_data = character_data
         self.tab = ttk.Frame(parent)
-        
+
         # Initialize gear die allocation data
         if 'gearDieAllocations' not in self.character_data:
             self.character_data['gearDieAllocations'] = {}
-        
+
         # Gear die slot counts based on rank
         self.gear_die_slots = {
             'd4': 2,  # Start with 1 free d4 slot + 1 d4 slot
             'd6': 1,  # Start with 1 d6 slot
             'd8': 1,  # Start with 1 d8 slot
             'd10': 1,  # Start with 1 d10 slot
-            'd12': 1  # Start with 1 d12 slot
+            'd12': 1   # Start with 1 d12 slot
         }
-        
+
         # Store allocation widgets
         self.allocation_widgets = {}
-        
+
         # Lock state
         self.choices_locked = False
-        
+
+        # Callback placeholder for notifying Basic Info tab about HP updates
+        self.max_hp_callback = None
+
         self.create_tab()
         
     def create_tab(self):
@@ -608,14 +615,17 @@ class GearDieTab:
             description += f"Duration: {spell_data.get('duration', 'None')}\n"
             description += f"Frequency: {spell_data.get('frequency', 'None')}\n"
             description += f"Description: {spell_data['description']}"
-            # Check for Material Component owned in inventory
+            # Check for Material Component owned in inventory (uses InventoryMaterials persisted data)
             if 'MC' in spell_data.get('spell_components', []) and spell_data.get('material_component'):
-                needed = spell_data['material_component']
+                needed = str(spell_data['material_component']).strip().lower()
                 has_it = False
                 try:
                     materials = self.character_data.get('inventory', {}).get('materials', [])
                     for item in materials:
-                        if str(item.get('component','')).strip().lower() == str(needed).strip().lower() and int(item.get('quantity',0)) > 0:
+                        # Support both new schema ('name') and legacy ('component')
+                        comp_name = str(item.get('name') or item.get('component') or '').strip().lower()
+                        qty = int(item.get('quantity', 0) or 0)
+                        if comp_name == needed and qty > 0:
                             has_it = True
                             break
                 except Exception:
@@ -764,8 +774,9 @@ class GearDieTab:
     def notify_max_hp_update(self):
         """Notify the basic info tab to update max HP display"""
         # This will be set by the main character sheet
-        if hasattr(self, 'max_hp_callback'):
-            self.max_hp_callback()
+        cb = getattr(self, 'max_hp_callback', None)
+        if callable(cb):
+            cb()
     
     def set_data(self, data):
         """Set gear die allocation data"""

@@ -1,787 +1,363 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import re
-try:
-    from magic_items import MAGIC_ITEMS  # when src/ is on sys.path
-except ModuleNotFoundError:
-    try:
-        from ..magic_items import MAGIC_ITEMS  # when using package relative import
-    except Exception:
-        import os, sys as _sys
-        _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if _base_dir not in _sys.path:
-            _sys.path.insert(0, _base_dir)
-        from magic_items import MAGIC_ITEMS
-try:
-    # access spells data (for material components)
-    from spells import SPELLS
-except ModuleNotFoundError:
-    try:
-        from ..spells import SPELLS
-    except Exception:
-        import os, sys as _sys
-        _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if _base_dir not in _sys.path:
-            _sys.path.insert(0, _base_dir)
-        from spells import SPELLS
+
+from .inventory_magic_bag import InventoryMagicBag
+from .inventory_stored_magic import InventoryStoredMagic
+from .inventory_materials import InventoryMaterials
+from .inventory_elsewhere import InventoryElsewhere
 
 class InventoryTab:
     def __init__(self, parent, character_data):
         self.parent = parent
         self.character_data = character_data
         self.tab = ttk.Frame(parent)
-        
-        # Initialize inventory data
-        if 'inventory' not in self.character_data:
-            self.character_data['inventory'] = {
-                'magic': [],
-                'stored_magic': [],
-                'elsewhere': [],
-                'materials': []
-            }
-        else:
-            # Backfill missing keys
-            self.character_data['inventory'].setdefault('magic', [])
-            self.character_data['inventory'].setdefault('stored_magic', [])
-            self.character_data['inventory'].setdefault('elsewhere', [])
-            self.character_data['inventory'].setdefault('materials', [])
-        
-        self.create_tab()
-        
-    def create_tab(self):
-        """Create the inventory tab"""
-        # Inventory Frame
-        frame = ttk.LabelFrame(self.tab, text="Inventory")
-        frame.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # Create notebook for different inventory sections
-        inventory_notebook = ttk.Notebook(frame)
+        inventory_notebook = ttk.Notebook(self.tab)
         inventory_notebook.pack(fill='both', expand=True, padx=5, pady=5)
 
-
-
-        # Magic Bag
-        magic_frame = ttk.Frame(inventory_notebook)
-        inventory_notebook.add(magic_frame, text="Magic Bag")
-        
-        # Add item frame for magic bag
-        magic_add_frame = ttk.Frame(magic_frame)
-        magic_add_frame.pack(fill='x', padx=5, pady=5)
-        
-        ttk.Label(magic_add_frame, text="Add Item:").pack(side='left', padx=5)
         self.magic_item_var = tk.StringVar()
-        magic_entry = ttk.Entry(magic_add_frame, textvariable=self.magic_item_var)
-        magic_entry.pack(side='left', padx=5, expand=True, fill='x')
-        
-        ttk.Label(magic_add_frame, text="Quantity:").pack(side='left', padx=5)
         self.magic_quantity_var = tk.StringVar(value="1")
-        magic_quantity = ttk.Entry(magic_add_frame, textvariable=self.magic_quantity_var, width=5)
-        magic_quantity.pack(side='left', padx=5)
-        
-        magic_add_button = ttk.Button(magic_add_frame, text="Add",
-                                    command=lambda: self.add_inventory_item('magic'))
-        magic_add_button.pack(side='left', padx=5)
-        
-        # Listbox for magic items
-        self.magic_listbox = tk.Listbox(magic_frame)
-        self.magic_listbox.pack(fill='both', expand=True, padx=5, pady=5)
-        
-        # Controls frame for magic items
-        magic_controls = ttk.Frame(magic_frame)
-        magic_controls.pack(fill='x', padx=5, pady=5)
-        
-        magic_remove_button = ttk.Button(magic_controls, text="Remove Selected",
-                                       command=lambda: self.remove_inventory_item('magic'))
-        magic_remove_button.pack(side='left', padx=5)
-        
-        magic_decrease_button = ttk.Button(magic_controls, text="Decrease Quantity",
-                                         command=lambda: self.adjust_quantity('magic', -1))
-        magic_decrease_button.pack(side='left', padx=5)
-        
-        magic_increase_button = ttk.Button(magic_controls, text="Increase Quantity",
-                                         command=lambda: self.adjust_quantity('magic', 1))
-        magic_increase_button.pack(side='left', padx=5)
-
-        # Stored Magic Items (Refactored to mirror Basic Info tab magic items)
-        stored_magic_frame = ttk.Frame(inventory_notebook)
-        inventory_notebook.add(stored_magic_frame, text="Stored Magic Items")
-        
-        # Build magic items lookup and values for stored magic
-        self.SM_CUSTOM_ITEM_LABEL = 'Custom Item...'
-        self.sm_magic_item_lookup = {}
-        sm_all_items = []
-        for group, group_dict in MAGIC_ITEMS.items():
-            for key, item_def in group_dict.items():
-                raw_name = item_def.get('name', key)
-                display_name = self.sanitize_item_name(raw_name)
-                if display_name not in self.sm_magic_item_lookup:
-                    stored = dict(item_def)
-                    stored['name'] = display_name
-                    if 'description' in stored:
-                        stored['description'] = self.sanitize_text(stored['description'])
-                    self.sm_magic_item_lookup[display_name] = stored
-                    sm_all_items.append(display_name)
-        sm_values = [self.SM_CUSTOM_ITEM_LABEL] + sorted(sm_all_items)
-        
-        # Add item frame for stored magic items
-        stored_magic_add_frame = ttk.Frame(stored_magic_frame)
-        stored_magic_add_frame.pack(fill='x', padx=5, pady=5)
-        
-        ttk.Label(stored_magic_add_frame, text="Magic Item:").pack(side='left', padx=5)
-        self.sm_item_var = tk.StringVar()
-        self.sm_item_combo = ttk.Combobox(stored_magic_add_frame, textvariable=self.sm_item_var,
-                                          values=sm_values, state='readonly', width=40)
-        self.sm_item_combo.pack(side='left', padx=5)
-        self.sm_item_combo.bind('<<ComboboxSelected>>', self.on_sm_item_selected)
-        
-        self.sm_variant_var = tk.StringVar()
-        self.sm_variant_combo = ttk.Combobox(stored_magic_add_frame, textvariable=self.sm_variant_var,
-                                             state='readonly', width=12)
-        self.sm_variant_combo.pack(side='left', padx=5)
-        
-        self.sm_charges_var = tk.StringVar(value="")
-        self.sm_charges_entry = ttk.Entry(stored_magic_add_frame, textvariable=self.sm_charges_var, width=6)
-        self.sm_charges_entry.pack(side='left', padx=5)
-        
-        stored_magic_add_button = ttk.Button(stored_magic_add_frame, text="Add Item",
-                                           command=self.add_stored_magic_item)
-        stored_magic_add_button.pack(side='left', padx=5)
-        
-        # Listbox for stored magic items
-        self.stored_magic_listbox = tk.Listbox(stored_magic_frame)
-        self.stored_magic_listbox.pack(fill='both', expand=True, padx=5, pady=5)
-        self.stored_magic_listbox.bind('<<ListboxSelect>>', self.sm_update_use_charge_state)
-        
-        # Controls frame for stored magic items
-        stored_magic_controls = ttk.Frame(stored_magic_frame)
-        stored_magic_controls.pack(fill='x', padx=5, pady=5)
-        
-        self.sm_remove_button = ttk.Button(stored_magic_controls, text="Remove Selected",
-                                              command=self.sm_remove_item)
-        self.sm_remove_button.pack(side='left', padx=5)
-        
-        # Removed Use Charge button per request
-        # self.sm_use_charge_button = ttk.Button(stored_magic_controls, text="Use Charge",
-        #                                         command=self.sm_use_charge)
-        # self.sm_use_charge_button.pack(side='left', padx=5)
-        
-        self.sm_recharge_button = ttk.Button(stored_magic_controls, text="Recharge Item",
-                                                command=self.sm_recharge_item)
-        self.sm_recharge_button.pack(side='left', padx=5)
-
-        # Description panel for stored magic items
-        sm_desc_frame = ttk.LabelFrame(stored_magic_frame, text="Magic Item Description")
-        sm_desc_frame.pack(fill='both', expand=False, padx=5, pady=5)
-        self.sm_desc_text = tk.Text(sm_desc_frame, wrap='word', height=6, state='disabled')
-        self.sm_desc_text.pack(fill='both', expand=True, padx=5, pady=5)
-
-        # Material Components
-        materials_frame = ttk.Frame(inventory_notebook)
-        inventory_notebook.add(materials_frame, text="Material Components")
-
-        # Build list of spells requiring MC
-        self.mc_spells = []
-        for s_name, s_def in SPELLS.items():
-            if 'MC' in s_def.get('spell_components', []) and s_def.get('material_component'):
-                self.mc_spells.append((s_name, s_def.get('material_component')))
-        self.mc_spells.sort(key=lambda x: x[0].lower())
-
-        mc_add_frame = ttk.Frame(materials_frame)
-        mc_add_frame.pack(fill='x', padx=5, pady=5)
-
-        ttk.Label(mc_add_frame, text="Spell:").pack(side='left', padx=5)
-        self.mc_spell_var = tk.StringVar()
-        self.mc_spell_combo = ttk.Combobox(
-            mc_add_frame,
-            textvariable=self.mc_spell_var,
-            values=[name for name, _ in self.mc_spells],
-            state='readonly', width=40
+        self.magic_listbox = tk.Listbox()  # placeholder; replaced with visible widget below
+        self.magic_bag_tab = InventoryMagicBag(
+            inventory_notebook,
+            self.magic_item_var,
+            self.magic_quantity_var,
+            self.add_magic_bag_item,
+            self.magic_listbox
         )
-        self.mc_spell_combo.pack(side='left', padx=5)
-        self.mc_spell_combo.bind('<<ComboboxSelected>>', self.on_mc_spell_selected)
+        inventory_notebook.add(self.magic_bag_tab.frame, text="Magic Bag")
 
-        ttk.Label(mc_add_frame, text="Component:").pack(side='left', padx=5)
+        # Make Magic Bag listbox visible inside its tab
+        try:
+            for c in range(4):
+                self.magic_bag_tab.frame.grid_columnconfigure(c, weight=1 if c in (1, 3) else 0)
+            ttk.Label(self.magic_bag_tab.frame, text="Items:").grid(row=4, column=0, columnspan=4, sticky='w', padx=5)
+            magic_list_frame = ttk.Frame(self.magic_bag_tab.frame)
+            magic_list_frame.grid(row=5, column=0, columnspan=4, sticky='nsew', padx=5, pady=(0, 5))
+            self.magic_bag_tab.frame.grid_rowconfigure(5, weight=1)
+            self.magic_listbox = tk.Listbox(magic_list_frame, height=8)
+            magic_scroll = ttk.Scrollbar(magic_list_frame, orient='vertical', command=self.magic_listbox.yview)
+            self.magic_listbox.configure(yscrollcommand=magic_scroll.set)
+            self.magic_listbox.pack(side='left', fill='both', expand=True)
+            magic_scroll.pack(side='right', fill='y')
+            # ensure the tab instance uses the visible listbox
+            self.magic_bag_tab.listbox = self.magic_listbox
+
+            # Buttons row for Magic Bag: Decrement only
+            magic_btns = ttk.Frame(self.magic_bag_tab.frame)
+            magic_btns.grid(row=6, column=0, columnspan=4, sticky='w', padx=5, pady=(0, 8))
+            ttk.Button(magic_btns, text="Decrement", command=self.decrement_magic_item).pack(side='left')
+        except Exception:
+            pass
+
+        self.sm_item_var = tk.StringVar()
+        self.sm_variant_var = tk.StringVar()
+        self.sm_charges_var = tk.StringVar(value="")
+        self.stored_magic_listbox = tk.Listbox()
+        self.stored_magic_tab = InventoryStoredMagic(
+            inventory_notebook,
+            self.sm_item_var,
+            self.sm_variant_var,
+            self.sm_charges_var,
+            self.add_stored_magic_item,
+            self.stored_magic_listbox
+        )
+        inventory_notebook.add(self.stored_magic_tab.frame, text="Stored Magic Items")
+
+        # Make Stored Magic a two-column layout: left list, right details
+        try:
+            self.stored_magic_tab.frame.grid_columnconfigure(0, weight=1)
+            self.stored_magic_tab.frame.grid_columnconfigure(1, weight=2)
+            self.stored_magic_tab.frame.grid_rowconfigure(1, weight=1)
+
+            # Left side: list and remove button
+            left = ttk.Frame(self.stored_magic_tab.frame)
+            left.grid(row=0, column=0, rowspan=3, sticky='nsew', padx=(5, 2), pady=5)
+            left.grid_columnconfigure(0, weight=1)
+            ttk.Label(left, text="Items:").grid(row=0, column=0, sticky='w')
+            sm_list_frame = ttk.Frame(left)
+            sm_list_frame.grid(row=1, column=0, sticky='nsew', pady=(0, 5))
+            left.grid_rowconfigure(1, weight=1)
+            self.stored_magic_listbox = tk.Listbox(sm_list_frame, height=12)
+            sm_scroll = ttk.Scrollbar(sm_list_frame, orient='vertical', command=self.stored_magic_listbox.yview)
+            self.stored_magic_listbox.configure(yscrollcommand=sm_scroll.set)
+            self.stored_magic_listbox.pack(side='left', fill='both', expand=True)
+            sm_scroll.pack(side='right', fill='y')
+            ttk.Button(left, text="Remove", command=self.remove_stored_magic_item).grid(row=2, column=0, sticky='w')
+            # Bind selection change to update right panel
+            self.stored_magic_listbox.bind('<<ListboxSelect>>', self.on_stored_magic_select)
+
+            # Right side: details panel from sub-tab
+            right = self.stored_magic_tab.right_frame
+            right.grid(row=0, column=1, rowspan=3, sticky='nsew', padx=(2, 5), pady=5)
+        except Exception:
+            pass
+
+        self.mc_spell_var = tk.StringVar()
         self.mc_component_var = tk.StringVar()
-        self.mc_component_entry = ttk.Entry(mc_add_frame, textvariable=self.mc_component_var, width=30, state='readonly')
-        self.mc_component_entry.pack(side='left', padx=5)
-
-        ttk.Label(mc_add_frame, text="Qty:").pack(side='left', padx=5)
         self.mc_quantity_var = tk.StringVar(value="1")
-        self.mc_quantity_entry = ttk.Entry(mc_add_frame, textvariable=self.mc_quantity_var, width=6)
-        self.mc_quantity_entry.pack(side='left', padx=5)
+        self.materials_listbox = tk.Listbox()  # placeholder; replaced with visible widget below
+        self.materials_tab = InventoryMaterials(
+            inventory_notebook,
+            self.mc_spell_var,
+            self.mc_component_var,
+            self.mc_quantity_var,
+            self.add_or_update_material,
+            self.materials_listbox
+        )
+        inventory_notebook.add(self.materials_tab.frame, text="Material Components")
 
-        mc_add_button = ttk.Button(mc_add_frame, text="Add Component", command=self.add_material_component)
-        mc_add_button.pack(side='left', padx=5)
+        # Make Materials listbox visible inside its tab (place below the controls)
+        try:
+            for c in range(4):
+                self.materials_tab.frame.grid_columnconfigure(c, weight=1 if c in (1, 3) else 0)
+            # Controls in InventoryMaterials occupy rows 0-5, so start list at row 6
+            ttk.Label(self.materials_tab.frame, text="Items:").grid(row=6, column=0, columnspan=4, sticky='w', padx=5)
+            mat_list_frame = ttk.Frame(self.materials_tab.frame)
+            mat_list_frame.grid(row=7, column=0, columnspan=4, sticky='nsew', padx=5, pady=(0, 5))
+            self.materials_tab.frame.grid_rowconfigure(7, weight=1)
+            self.materials_listbox = tk.Listbox(mat_list_frame, height=8)
+            mat_scroll = ttk.Scrollbar(mat_list_frame, orient='vertical', command=self.materials_listbox.yview)
+            self.materials_listbox.configure(yscrollcommand=mat_scroll.set)
+            self.materials_listbox.pack(side='left', fill='both', expand=True)
+            mat_scroll.pack(side='right', fill='y')
+            # ensure the tab instance uses the visible listbox
+            self.materials_tab.listbox = self.materials_listbox
 
-        # Listbox for materials
-        self.materials_listbox = tk.Listbox(materials_frame)
-        self.materials_listbox.pack(fill='both', expand=True, padx=5, pady=5)
+            # Buttons row for Materials: Decrement only
+            mat_btns = ttk.Frame(self.materials_tab.frame)
+            mat_btns.grid(row=8, column=0, columnspan=4, sticky='w', padx=5, pady=(0, 8))
+            ttk.Button(mat_btns, text="Decrement", command=self.decrement_material_item).pack(side='left')
+        except Exception:
+            pass
 
-        # Controls for materials
-        mc_controls = ttk.Frame(materials_frame)
-        mc_controls.pack(fill='x', padx=5, pady=5)
-
-        mc_remove_button = ttk.Button(mc_controls, text="Remove Selected", command=self.remove_material_component)
-        mc_remove_button.pack(side='left', padx=5)
-
-        mc_dec_button = ttk.Button(mc_controls, text="Decrease Quantity", command=lambda: self.adjust_material_quantity(-1))
-        mc_dec_button.pack(side='left', padx=5)
-
-        mc_inc_button = ttk.Button(mc_controls, text="Increase Quantity", command=lambda: self.adjust_material_quantity(1))
-        mc_inc_button.pack(side='left', padx=5)
-
-        # Elsewhere
-        elsewhere_frame = ttk.Frame(inventory_notebook)
-        inventory_notebook.add(elsewhere_frame, text="Elsewhere")
-        
-        # Add item frame for elsewhere
-        elsewhere_add_frame = ttk.Frame(elsewhere_frame)
-        elsewhere_add_frame.pack(fill='x', padx=5, pady=5)
-        
-        ttk.Label(elsewhere_add_frame, text="Add Item:").pack(side='left', padx=5)
         self.elsewhere_item_var = tk.StringVar()
-        elsewhere_entry = ttk.Entry(elsewhere_add_frame, textvariable=self.elsewhere_item_var)
-        elsewhere_entry.pack(side='left', padx=5, expand=True, fill='x')
-        
-        ttk.Label(elsewhere_add_frame, text="Quantity:").pack(side='left', padx=5)
         self.elsewhere_quantity_var = tk.StringVar(value="1")
-        elsewhere_quantity = ttk.Entry(elsewhere_add_frame, textvariable=self.elsewhere_quantity_var, width=5)
-        elsewhere_quantity.pack(side='left', padx=5)
-        
-        ttk.Label(elsewhere_add_frame, text="Location:").pack(side='left', padx=5)
         self.elsewhere_location_var = tk.StringVar()
-        elsewhere_location = ttk.Entry(elsewhere_add_frame, textvariable=self.elsewhere_location_var)
-        elsewhere_location.pack(side='left', padx=5, expand=True, fill='x')
-        
-        elsewhere_add_button = ttk.Button(elsewhere_add_frame, text="Add",
-                                        command=lambda: self.add_inventory_item('elsewhere'))
-        elsewhere_add_button.pack(side='left', padx=5)
-        
-        # Listbox for elsewhere items
-        self.elsewhere_listbox = tk.Listbox(elsewhere_frame)
-        self.elsewhere_listbox.pack(fill='both', expand=True, padx=5, pady=5)
-        
-        # Controls frame for elsewhere items
-        elsewhere_controls = ttk.Frame(elsewhere_frame)
-        elsewhere_controls.pack(fill='x', padx=5, pady=5)
-        
-        elsewhere_remove_button = ttk.Button(elsewhere_controls, text="Remove Selected",
-                                           command=lambda: self.remove_inventory_item('elsewhere'))
-        elsewhere_remove_button.pack(side='left', padx=5)
-        
-        elsewhere_decrease_button = ttk.Button(elsewhere_controls, text="Decrease Quantity",
-                                             command=lambda: self.adjust_quantity('elsewhere', -1))
-        elsewhere_decrease_button.pack(side='left', padx=5)
-        
-        elsewhere_increase_button = ttk.Button(elsewhere_controls, text="Increase Quantity",
-                                             command=lambda: self.adjust_quantity('elsewhere', 1))
-        elsewhere_increase_button.pack(side='left', padx=5)
-        
-        # Edit location button for elsewhere items
-        elsewhere_edit_button = ttk.Button(elsewhere_controls, text="Edit Location",
-                                         command=self.edit_elsewhere_location)
-        elsewhere_edit_button.pack(side='left', padx=5)
-        
-        # Store listbox references
+        self.elsewhere_listbox = tk.Listbox()  # placeholder; replaced with visible widget below
+        self.elsewhere_tab = InventoryElsewhere(
+            inventory_notebook,
+            self.elsewhere_item_var,
+            self.elsewhere_quantity_var,
+            self.elsewhere_location_var,
+            self.add_elsewhere_item,
+            self.elsewhere_listbox
+        )
+        inventory_notebook.add(self.elsewhere_tab.frame, text="Elsewhere")
+
+        # Make Elsewhere listbox visible inside its tab
+        try:
+            for c in range(4):
+                self.elsewhere_tab.frame.grid_columnconfigure(c, weight=1 if c in (1, 3) else 0)
+            ttk.Label(self.elsewhere_tab.frame, text="Items:").grid(row=5, column=0, columnspan=4, sticky='w', padx=5)
+            elsewhere_list_frame = ttk.Frame(self.elsewhere_tab.frame)
+            elsewhere_list_frame.grid(row=6, column=0, columnspan=4, sticky='nsew', padx=5, pady=(0, 5))
+            self.elsewhere_tab.frame.grid_rowconfigure(6, weight=1)
+            self.elsewhere_listbox = tk.Listbox(elsewhere_list_frame, height=8)
+            elsewhere_scroll = ttk.Scrollbar(elsewhere_list_frame, orient='vertical', command=self.elsewhere_listbox.yview)
+            self.elsewhere_listbox.configure(yscrollcommand=elsewhere_scroll.set)
+            self.elsewhere_listbox.pack(side='left', fill='both', expand=True)
+            elsewhere_scroll.pack(side='right', fill='y')
+            self.elsewhere_tab.listbox = self.elsewhere_listbox
+
+            # Buttons row for Elsewhere: Decrement only
+            elsewhere_btns = ttk.Frame(self.elsewhere_tab.frame)
+            elsewhere_btns.grid(row=7, column=0, columnspan=4, sticky='w', padx=5, pady=(0, 8))
+            ttk.Button(elsewhere_btns, text="Decrement", command=self.decrement_elsewhere_item).pack(side='left')
+        except Exception:
+            pass
+
+    # Map categories to their listboxes for load/save helpers
         self.listboxes = {
             'magic': self.magic_listbox,
             'stored_magic': self.stored_magic_listbox,
             'elsewhere': self.elsewhere_listbox,
-            'materials': self.materials_listbox
         }
-        
-        # Store variable references (exclude stored_magic, handled separately)
-        self.item_vars = {
-            'magic': self.magic_item_var,
-            'elsewhere': self.elsewhere_item_var
-        }
-        
-        self.quantity_vars = {
-            'magic': self.magic_quantity_var,
-            'elsewhere': self.elsewhere_quantity_var
-        }
-        
-        # Load existing inventory data
-        self.load_inventory_data()
 
-    # --- Material Components helpers ---
-    def on_mc_spell_selected(self, event=None):
-        name = self.mc_spell_var.get().strip()
-        comp = ''
-        if name:
-            for s_name, material in self.mc_spells:
-                if s_name == name:
-                    comp = material or ''
-                    break
-        self.mc_component_var.set(comp)
-
-    def add_material_component(self):
-        name = self.mc_spell_var.get().strip()
-        comp = self.mc_component_var.get().strip()
-        qty_str = self.mc_quantity_var.get().strip()
-        if not name or not comp:
-            messagebox.showwarning("Warning", "Please select a spell to add its component.")
-            return
+        # Load any pre-existing inventory data into the visible listboxes
         try:
-            qty = int(qty_str)
-            if qty <= 0:
-                messagebox.showwarning("Warning", "Quantity must be positive.")
-                return
-        except ValueError:
-            messagebox.showwarning("Warning", "Quantity must be a number.")
-            return
-        # Append to data
-        self.character_data['inventory']['materials'].append({
-            'spell': name,
-            'component': comp,
-            'quantity': qty
-        })
-        self.refresh_materials_listbox()
-        # clear
-        self.mc_spell_combo.set('')
-        self.mc_component_var.set('')
-        self.mc_quantity_var.set('1')
+            self.load_inventory_data()
+        except Exception:
+            pass
 
-    def remove_material_component(self):
-        lb = self.materials_listbox
+    def on_stored_magic_select(self, event=None):
+        """When a stored magic entry is selected, mirror it to the right panel controls."""
+        try:
+            lb = self.stored_magic_listbox
+            sel = lb.curselection()
+            if not sel:
+                return
+            idx = sel[0]
+            items = self.character_data['inventory'].get('stored_magic', [])
+            if idx >= len(items):
+                return
+            entry = items[idx]
+            # Ask the sub-tab to sync its controls
+            if hasattr(self.stored_magic_tab, 'set_selection_from_entry'):
+                self.stored_magic_tab.set_selection_from_entry(entry)
+        except Exception:
+            pass
+
+    def add_magic_bag_item(self):
+        item = self.magic_item_var.get()
+        if item == "Custom...":
+            item = self.magic_bag_tab.custom_item_entry.get().strip() or "Custom Item"
+            gold = "-"
+        else:
+            gold = self.magic_bag_tab.gold_var.get()
+        # store quantity as int in data
+        try:
+            qty_int = int(self.magic_quantity_var.get())
+        except Exception:
+            qty_int = 1
+        items = self.character_data['inventory']['magic']
+        # Find existing by name
+        existing_idx = next((i for i, d in enumerate(items) if d.get('name') == item), None)
+        if existing_idx is not None:
+            items[existing_idx]['quantity'] = int(items[existing_idx].get('quantity', 1)) + qty_int
+            # Keep existing gold value
+            ex = items[existing_idx]
+            display = f"{ex.get('name','')} (x{ex.get('quantity',1)}) - {ex.get('gold','-')}g each"
+            # Update listbox at same index
+            if existing_idx < self.magic_listbox.size():
+                self.magic_listbox.delete(existing_idx)
+                self.magic_listbox.insert(existing_idx, display)
+                self.magic_listbox.select_set(existing_idx)
+            else:
+                self.magic_listbox.insert(tk.END, display)
+        else:
+            items.append({'name': item, 'quantity': qty_int, 'gold': gold})
+            entry = f"{item} (x{qty_int}) - {gold}g each"
+            self.magic_listbox.insert(tk.END, entry)
+
+    def add_elsewhere_item(self):
+        item = self.elsewhere_item_var.get()
+        if item == "Custom...":
+            item = self.elsewhere_tab.custom_item_entry.get().strip() or "Custom Item"
+            gold = "-"
+        else:
+            gold = self.elsewhere_tab.gold_var.get()
+        try:
+            qty_int = int(self.elsewhere_quantity_var.get())
+        except Exception:
+            qty_int = 1
+        location = self.elsewhere_location_var.get().strip() or "(No location)"
+        items = self.character_data['inventory']['elsewhere']
+        # Combine by name and location
+        existing_idx = next((i for i, d in enumerate(items)
+                             if d.get('name') == item and (d.get('location','') == location)), None)
+        if existing_idx is not None:
+            items[existing_idx]['quantity'] = int(items[existing_idx].get('quantity', 1)) + qty_int
+            ex = items[existing_idx]
+            display = f"{ex.get('name','')} (x{ex.get('quantity',1)}) - {ex.get('gold','-')}g each @ {ex.get('location','')}"
+            if existing_idx < self.elsewhere_listbox.size():
+                self.elsewhere_listbox.delete(existing_idx)
+                self.elsewhere_listbox.insert(existing_idx, display)
+                self.elsewhere_listbox.select_set(existing_idx)
+            else:
+                self.elsewhere_listbox.insert(tk.END, display)
+        else:
+            items.append({'name': item, 'quantity': qty_int, 'gold': gold, 'location': location})
+            entry = f"{item} (x{qty_int}) - {gold}g each @ {location}"
+            self.elsewhere_listbox.insert(tk.END, entry)
+
+    def decrement_magic_item(self):
+        lb = self.magic_listbox
         sel = lb.curselection()
         if not sel:
-            messagebox.showwarning("Warning", "Please select a component to remove.")
+            messagebox.showwarning("Warning", "Select an item to decrement.")
             return
         idx = sel[0]
-        if idx < len(self.character_data['inventory']['materials']):
-            self.character_data['inventory']['materials'].pop(idx)
-        self.refresh_materials_listbox()
+        items = self.character_data['inventory']['magic']
+        if idx >= len(items):
+            return
+        item = items[idx]
+        qty = item.get('quantity', 1)
+        try:
+            qty_int = int(qty)
+        except Exception:
+            qty_int = 1
+        qty_int -= 1
+        if qty_int <= 0:
+            # remove item
+            items.pop(idx)
+            lb.delete(idx)
+        else:
+            item['quantity'] = qty_int
+            display = f"{item.get('name','')} (x{qty_int}) - {item.get('gold','-')}g each"
+            lb.delete(idx)
+            lb.insert(idx, display)
+            lb.select_set(idx)
 
-    def adjust_material_quantity(self, delta):
-        lb = self.materials_listbox
+    def decrement_elsewhere_item(self):
+        lb = self.elsewhere_listbox
         sel = lb.curselection()
         if not sel:
-            messagebox.showwarning("Warning", "Please select a component to adjust.")
+            messagebox.showwarning("Warning", "Select an item to decrement.")
             return
         idx = sel[0]
-        if idx >= len(self.character_data['inventory']['materials']):
+        items = self.character_data['inventory']['elsewhere']
+        if idx >= len(items):
             return
-        item = self.character_data['inventory']['materials'][idx]
-        new_q = item.get('quantity', 0) + delta
-        if new_q <= 0:
-            # remove
-            self.character_data['inventory']['materials'].pop(idx)
-        else:
-            item['quantity'] = new_q
-        self.refresh_materials_listbox()
-
-    def refresh_materials_listbox(self):
-        if not hasattr(self, 'materials_listbox'):
-            return
-        self.materials_listbox.delete(0, tk.END)
-        for item in self.character_data['inventory'].get('materials', []):
-            comp = item.get('component', '')
-            spell = item.get('spell', '')
-            qty = item.get('quantity', 0)
-            display = f"{comp} (x{qty}) - for {spell}"
-            self.materials_listbox.insert(tk.END, display)
-
-    # --- Helpers to sanitize names/description (match BasicInfoTab) ---
-    def sanitize_item_name(self, name: str) -> str:
-        if not name:
-            return name
-        name = re.sub(r"[\u2018\u2019\u02BC\u2032`']", "", name)
-        name = re.sub(r"\s+", " ", name).strip()
-        return name
-
-    def sanitize_text(self, text: str) -> str:
-        if not text:
-            return text
-        text = re.sub(r"[\u2018\u2019\u02BC\u2032`']", "", text)
-        text = re.sub(r"\s+", " ", text)
-        return text.strip()
-
-    def add_inventory_item(self, category):
-        """Add an item to the specified inventory category (magic, elsewhere only)"""
-        item_name = self.item_vars[category].get().strip()
-        quantity_str = self.quantity_vars[category].get().strip()
-        if not item_name:
-            messagebox.showwarning("Warning", "Please enter an item name.")
-            return
+        item = items[idx]
+        qty = item.get('quantity', 1)
         try:
-            quantity = int(quantity_str)
-            if quantity <= 0:
-                messagebox.showwarning("Warning", "Quantity must be positive.")
-                return
-        except ValueError:
-            messagebox.showwarning("Warning", "Quantity must be a number.")
-            return
-        # Create item entry
-        if category == 'elsewhere':
-            location = self.elsewhere_location_var.get().strip()
-            if not location:
-                messagebox.showwarning("Warning", "Please enter a location for elsewhere items.")
-                return
-            item_entry = f"{item_name} (x{quantity}) - {location}"
+            qty_int = int(qty)
+        except Exception:
+            qty_int = 1
+        qty_int -= 1
+        if qty_int <= 0:
+            items.pop(idx)
+            lb.delete(idx)
         else:
-            item_entry = f"{item_name} (x{quantity})"
-        # Add to listbox and data
-        listbox = self.listboxes[category]
-        listbox.insert(tk.END, item_entry)
-        # Store in character data
-        if category == 'elsewhere':
-            self.character_data['inventory'][category].append({
-                'name': item_name,
-                'quantity': quantity,
-                'location': location
-            })
-        else:
-            self.character_data['inventory'][category].append({
-                'name': item_name,
-                'quantity': quantity
-            })
-        # Clear input fields
-        self.item_vars[category].set("")
-        self.quantity_vars[category].set("1")
-        if category == 'elsewhere':
-            self.elsewhere_location_var.set("")
+            item['quantity'] = qty_int
+            display = f"{item.get('name','')} (x{qty_int}) - {item.get('gold','-')}g each @ {item.get('location','')}"
+            lb.delete(idx)
+            lb.insert(idx, display)
+            lb.select_set(idx)
 
-    def remove_inventory_item(self, category):
-        """Remove selected item from inventory"""
-        listbox = self.listboxes[category]
-        selection = listbox.curselection()
-        
-        if not selection:
-            messagebox.showwarning("Warning", "Please select an item to remove.")
+    def remove_stored_magic_item(self):
+        lb = self.stored_magic_listbox
+        sel = lb.curselection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a stored magic item to remove.")
             return
-        
-        index = selection[0]
-        listbox.delete(index)
-        
-        # Remove from character data
-        if index < len(self.character_data['inventory'][category]):
-            self.character_data['inventory'][category].pop(index)
-
-    def adjust_quantity(self, category, change):
-        """Adjust quantity of selected item"""
-        listbox = self.listboxes[category]
-        selection = listbox.curselection()
-        
-        if not selection:
-            messagebox.showwarning("Warning", "Please select an item to adjust.")
+        idx = sel[0]
+        items = self.character_data['inventory']['stored_magic']
+        if idx >= len(items):
             return
-        
-        index = selection[0]
-        if index >= len(self.character_data['inventory'][category]):
-            return
-        
-        item_data = self.character_data['inventory'][category][index]
-        new_quantity = item_data['quantity'] + change
-        
-        if new_quantity <= 0:
-            # Remove item if quantity becomes 0 or negative
-            self.remove_inventory_item(category)
-            return
-        
-        item_data['quantity'] = new_quantity
-        
-        # Update display
-        if category == 'elsewhere':
-            new_entry = f"{item_data['name']} (x{new_quantity}) - {item_data['location']}"
-        else:
-            new_entry = f"{item_data['name']} (x{new_quantity})"
-        
-        listbox.delete(index)
-        listbox.insert(index, new_entry)
-
-    # --- Stored Magic specific methods ---
-    def on_sm_item_selected(self, event=None):
-        """Update variant/charges/description based on selected item in combobox."""
-        name = self.sm_item_var.get().strip() if hasattr(self, 'sm_item_var') else ''
-        if not name:
-            self.sm_update_description(None)
-            self.sm_update_use_charge_state()
-            return
-        if name == self.SM_CUSTOM_ITEM_LABEL:
-            self.open_sm_custom_item_dialog()
-            return
-        item_def = self.sm_magic_item_lookup.get(name, {})
-        # Variants
-        if 'variants' in item_def:
-            self.sm_variant_combo['values'] = item_def['variants']
-            cur = self.sm_variant_var.get()
-            if cur not in item_def['variants']:
-                self.sm_variant_combo.set(item_def['variants'][0])
-        else:
-            self.sm_variant_combo['values'] = []
-            self.sm_variant_combo.set('')
-        # Charges default
-        if 'charges' in item_def:
-            self.sm_charges_var.set(str(item_def['charges']))
-        else:
-            self.sm_charges_var.set('')
-        # Description
-        self.sm_update_description(item_def)
-
-    def sm_update_description(self, item_def):
-        if not hasattr(self, 'sm_desc_text'):
-            return
-        self.sm_desc_text.config(state='normal')
-        self.sm_desc_text.delete('1.0', tk.END)
-        if item_def:
-            desc = self.sanitize_text(item_def.get('description', '(No description available)'))
-            if 'variants' in item_def:
-                desc += "\n\nVariants: " + ", ".join(item_def['variants'])
-            if 'charges' in item_def:
-                desc += f"\nDefault Charges: {item_def['charges']}"
-        else:
-            desc = "Select a magic item to view its description."
-        self.sm_desc_text.insert('1.0', desc)
-        self.sm_desc_text.config(state='disabled')
+        items.pop(idx)
+        lb.delete(idx)
 
     def add_stored_magic_item(self):
-        """Add selected magic item to stored_magic with unlimited count (no cap)."""
-        name = self.sm_item_var.get().strip() if hasattr(self, 'sm_item_var') else ''
-        if not name:
-            messagebox.showwarning("Warning", "Please select a magic item.")
-            return
-        if name == self.SM_CUSTOM_ITEM_LABEL:
-            self.open_sm_custom_item_dialog()
-            return
-        item_def = self.sm_magic_item_lookup.get(name)
-        if not item_def:
-            messagebox.showwarning("Warning", "Unknown magic item.")
-            return
-        entry = {'name': item_def.get('name', name)}
-        var = self.sm_variant_var.get().strip() if hasattr(self, 'sm_variant_var') else ''
-        if var:
-            entry['variant'] = var
-        if 'description' in item_def:
-            entry['description'] = self.sanitize_text(item_def['description'])
-        # Charges
-        max_charges = None
-        raw_ch = self.sm_charges_var.get().strip() if hasattr(self, 'sm_charges_var') else ''
-        if raw_ch:
+        name = self.sm_item_var.get().strip()
+        variant = self.sm_variant_var.get().strip()
+        charges_text = self.sm_charges_var.get().strip()
+        current = None
+        maxc = None
+        if charges_text:
             try:
-                max_charges = int(raw_ch)
-            except ValueError:
-                max_charges = None
-        if max_charges is None and 'charges' in item_def:
-            try:
-                max_charges = int(item_def['charges'])
+                current = int(charges_text)
+                maxc = current
             except Exception:
-                max_charges = None
-        if max_charges is not None:
-            entry['max_charges'] = max_charges
-            entry['current_charges'] = max_charges
-        # Append to data
+                current = None
+                maxc = None
+        # Persist
+        entry = {'name': name}
+        if variant:
+            entry['variant'] = variant
+        if current is not None and maxc is not None:
+            entry['current_charges'] = str(current)
+            entry['max_charges'] = str(maxc)
         self.character_data['inventory']['stored_magic'].append(entry)
-        # Update UI
-        self.sm_refresh_listbox()
-        # Select last
-        self.stored_magic_listbox.select_clear(0, tk.END)
-        self.stored_magic_listbox.select_set(tk.END)
-        self.stored_magic_listbox.event_generate('<<ListboxSelect>>')
-        self.sm_update_use_charge_state()
-
-    def sm_refresh_listbox(self):
-        if not hasattr(self, 'stored_magic_listbox'):
-            return
-        self.stored_magic_listbox.delete(0, tk.END)
-        for item in self.character_data['inventory']['stored_magic']:
-            # Legacy fallback: if it had quantity (should be normalized), show with (xN)
-            if 'quantity' in item and isinstance(item.get('quantity'), int):
-                display = f"{item.get('name','')} (x{item.get('quantity',1)})"
-            else:
-                parts = [item.get('name','')]
-                if item.get('variant'):
-                    parts.append(f"({item['variant']})")
-                if 'current_charges' in item and 'max_charges' in item:
-                    parts.append(f"Charges {item['current_charges']}/{item['max_charges']}")
-                display = ' - '.join([p for p in parts if p])
-            self.stored_magic_listbox.insert(tk.END, display)
-
-    def sm_update_use_charge_state(self, event=None):
-        # Enable/disable buttons based on selection
-        def disable(btn):
-            try:
-                btn.state(['disabled'])
-            except Exception:
-                btn.configure(state='disabled')
-        def enable(btn):
-            try:
-                btn.state(['!disabled'])
-            except Exception:
-                btn.configure(state='normal')
-        if not hasattr(self, 'stored_magic_listbox'):
-            return
-        sel = self.stored_magic_listbox.curselection()
-        if not sel:
-            # Only recharge button remains
-            if hasattr(self, 'sm_recharge_button'):
-                disable(self.sm_recharge_button)
-            return
-        idx = sel[0]
-        items = self.character_data['inventory']['stored_magic']
-        if idx >= len(items):
-            if hasattr(self, 'sm_recharge_button'):
-                disable(self.sm_recharge_button)
-            return
-        item = items[idx]
-        # Update description view to selected item's saved description if present
-        self.sm_update_description({'description': item.get('description','')})
-        # Enable recharge only if not at max
-        if 'current_charges' in item and 'max_charges' in item and item['current_charges'] < item['max_charges']:
-            if hasattr(self, 'sm_recharge_button'):
-                enable(self.sm_recharge_button)
-        else:
-            if hasattr(self, 'sm_recharge_button'):
-                disable(self.sm_recharge_button)
-
-    def sm_use_charge(self):
-        sel = self.stored_magic_listbox.curselection()
-        if not sel:
-            return
-        idx = sel[0]
-        items = self.character_data['inventory']['stored_magic']
-        if idx >= len(items):
-            return
-        item = items[idx]
-        if 'current_charges' in item and item['current_charges'] > 0:
-            item['current_charges'] -= 1
-            if item['current_charges'] < 0:
-                item['current_charges'] = 0
-            self.sm_refresh_listbox()
-            self.stored_magic_listbox.select_set(idx)
-            self.stored_magic_listbox.event_generate('<<ListboxSelect>>')
-
-    def sm_recharge_item(self):
-        sel = self.stored_magic_listbox.curselection()
-        if not sel:
-            return
-        idx = sel[0]
-        items = self.character_data['inventory']['stored_magic']
-        if idx >= len(items):
-            return
-        item = items[idx]
-        if 'current_charges' in item and 'max_charges' in item:
-            item['current_charges'] = item['max_charges']
-            self.sm_refresh_listbox()
-            self.stored_magic_listbox.select_set(idx)
-            self.stored_magic_listbox.event_generate('<<ListboxSelect>>')
-
-    def sm_remove_item(self):
-        sel = self.stored_magic_listbox.curselection()
-        if not sel:
-            return
-        idx = sel[0]
-        if idx < len(self.character_data['inventory']['stored_magic']):
-            del self.character_data['inventory']['stored_magic'][idx]
-        self.sm_refresh_listbox()
-        # Select nearest remaining item
-        items = self.character_data['inventory']['stored_magic']
-        if items:
-            new_index = min(idx, len(items) - 1)
-            self.stored_magic_listbox.select_set(new_index)
-            self.stored_magic_listbox.event_generate('<<ListboxSelect>>')
-        else:
-            self.sm_update_use_charge_state()
-
-    def open_sm_custom_item_dialog(self):
-        dialog = tk.Toplevel(self.tab)
-        dialog.title('Create Custom Magic Item')
-        dialog.transient(self.tab)
-        dialog.grab_set()
-
-        tk.Label(dialog, text='Name:').grid(row=0, column=0, sticky='e', padx=5, pady=5)
-        name_var = tk.StringVar()
-        name_entry = ttk.Entry(dialog, textvariable=name_var, width=40)
-        name_entry.grid(row=0, column=1, padx=5, pady=5)
-
-        tk.Label(dialog, text='Max Charges (optional):').grid(row=1, column=0, sticky='e', padx=5, pady=5)
-        charges_var = tk.StringVar()
-        charges_entry = ttk.Entry(dialog, textvariable=charges_var, width=10)
-        charges_entry.grid(row=1, column=1, sticky='w', padx=5, pady=5)
-
-        tk.Label(dialog, text='Description:').grid(row=2, column=0, sticky='ne', padx=5, pady=5)
-        desc_text = tk.Text(dialog, width=50, height=10, wrap='word')
-        desc_text.grid(row=2, column=1, padx=5, pady=5)
-
-        button_frame = ttk.Frame(dialog)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=10)
-
-        def confirm():
-            name = self.sanitize_item_name(name_var.get().strip())
-            if not name:
-                dialog.destroy()
-                return
-            if name in self.sm_magic_item_lookup:
-                dialog.destroy()
-                return
-            description = self.sanitize_text(desc_text.get('1.0', tk.END).strip())
-            charges_input = charges_var.get().strip()
-            item_def = {'name': name, 'description': description}
-            if charges_input:
-                try:
-                    ch = int(charges_input)
-                    item_def['charges'] = ch
-                except ValueError:
-                    pass
-            self.sm_magic_item_lookup[name] = item_def
-            # Update combobox values
-            current_vals = list(self.sm_item_combo['values'])
-            if name not in current_vals:
-                base = [v for v in current_vals if v not in (self.SM_CUSTOM_ITEM_LABEL, name) and v]
-                self.sm_item_combo['values'] = [self.SM_CUSTOM_ITEM_LABEL] + sorted(base + [name])
-            self.sm_item_var.set(name)
-            if 'charges' in item_def:
-                self.sm_charges_var.set(str(item_def['charges']))
-            else:
-                self.sm_charges_var.set('')
-            self.sm_variant_combo['values'] = []
-            self.sm_variant_var.set('')
-            self.sm_update_description(item_def)
-            dialog.destroy()
-
-        ttk.Button(button_frame, text='Add Item', command=confirm).pack(side='left', padx=5)
-        ttk.Button(button_frame, text='Cancel', command=dialog.destroy).pack(side='left', padx=5)
-        name_entry.focus_set()
-
-    def edit_elsewhere_location(self):
-        """Edit location of selected elsewhere item"""
-        listbox = self.listboxes['elsewhere']
-        selection = listbox.curselection()
-        
-        if not selection:
-            messagebox.showwarning("Warning", "Please select an item to edit.")
-            return
-        
-        index = selection[0]
-        if index >= len(self.character_data['inventory']['elsewhere']):
-            return
-        
-        item_data = self.character_data['inventory']['elsewhere'][index]
-        
-        # Create edit dialog
-        dialog = tk.Toplevel(self.parent)
-        dialog.title("Edit Location")
-        dialog.geometry("300x150")
-        dialog.transient(self.parent)
-        dialog.grab_set()
-        
-        ttk.Label(dialog, text="New Location:").pack(pady=10)
-        location_var = tk.StringVar(value=item_data['location'])
-        location_entry = ttk.Entry(dialog, textvariable=location_var, width=40)
-        location_entry.pack(pady=10)
-        
-        def save_location():
-            new_location = location_var.get().strip()
-            if new_location:
-                item_data['location'] = new_location
-                new_entry = f"{item_data['name']} (x{item_data['quantity']}) - {new_location}"
-                listbox.delete(index)
-                listbox.insert(index, new_entry)
-                dialog.destroy()
-            else:
-                messagebox.showwarning("Warning", "Location cannot be empty.")
-        
-        ttk.Button(dialog, text="Save", command=save_location).pack(pady=10)
+        # Display in listbox
+        parts = [name]
+        if variant:
+            parts.append(f"({variant})")
+        if current is not None and maxc is not None:
+            parts.append(f"Charges {current}/{maxc}")
+        display = ' - '.join([p for p in parts if p])
+        self.stored_magic_listbox.insert(tk.END, display)
 
     def normalize_stored_magic(self):
         """Normalize legacy stored_magic entries with quantities into individual items."""
@@ -806,7 +382,7 @@ class InventoryTab:
             listbox.delete(0, tk.END)
             for item_data in self.character_data['inventory'][category]:
                 if category == 'elsewhere':
-                    entry = f"{item_data['name']} (x{item_data['quantity']}) - {item_data['location']}"
+                    entry = f"{item_data.get('name','')} (x{item_data.get('quantity',1)}) - {item_data.get('gold','-')}g each @ {item_data.get('location','')}"
                 elif category == 'stored_magic':
                     # Use rich display like in BasicInfoTab
                     if 'quantity' in item_data and isinstance(item_data.get('quantity'), int):
@@ -819,8 +395,79 @@ class InventoryTab:
                             parts.append(f"Charges {item_data['current_charges']}/{item_data['max_charges']}")
                         entry = ' - '.join([p for p in parts if p])
                 else:
-                    entry = f"{item_data['name']} (x{item_data['quantity']})"
+                    entry = f"{item_data.get('name','')} (x{item_data.get('quantity',1)}) - {item_data.get('gold','-')}g each"
                 listbox.insert(tk.END, entry)
+
+        # Optional: if materials are stored in character_data, display them in the Materials listbox
+        try:
+            materials = self.character_data['inventory'].get('materials', [])
+            self.materials_listbox.delete(0, tk.END)
+            for m in materials:
+                cost_each = m.get('gold', '-')
+                cost_str = 'N/A' if cost_each in (None, 'N/A') else f"{cost_each}"
+                self.materials_listbox.insert(tk.END, f"{m.get('name','')} (x{m.get('quantity',1)}) - {cost_str}g each")
+        except Exception:
+            pass
+
+    def add_or_update_material(self):
+        comp = self.mc_component_var.get().strip() or 'Material Component'
+        try:
+            qty_int = int(self.mc_quantity_var.get())
+        except Exception:
+            qty_int = 1
+        die = getattr(self.materials_tab, 'prereq_var', tk.StringVar(value='')).get().strip()
+        cost_each = getattr(self.materials_tab, 'COST_BY_PREREQ', {}).get(die, None)
+        cost_str = 'N/A' if cost_each is None else f"{cost_each}"
+        # Persist to character_data with quantity combining
+        materials = self.character_data['inventory'].setdefault('materials', [])
+        existing_idx = next((i for i, m in enumerate(materials) if m.get('name') == comp), None)
+        if existing_idx is not None:
+            materials[existing_idx]['quantity'] = int(materials[existing_idx].get('quantity', 1)) + qty_int
+            # Keep existing gold
+            ex = materials[existing_idx]
+            disp_cost = 'N/A' if ex.get('gold') in (None, 'N/A') else f"{ex.get('gold')}"
+            display = f"{ex.get('name','')} (x{ex.get('quantity',1)}) - {disp_cost}g each"
+            # Update listbox at same index
+            if existing_idx < self.materials_listbox.size():
+                self.materials_listbox.delete(existing_idx)
+                self.materials_listbox.insert(existing_idx, display)
+                self.materials_listbox.select_set(existing_idx)
+            else:
+                self.materials_listbox.insert(tk.END, display)
+        else:
+            new_gold = cost_each if cost_each is not None else 'N/A'
+            materials.append({'name': comp, 'quantity': qty_int, 'gold': new_gold})
+            entry = f"{comp} (x{qty_int}) - {('N/A' if new_gold == 'N/A' else str(new_gold))}g each"
+            self.materials_listbox.insert(tk.END, entry)
+
+    def decrement_material_item(self):
+        lb = self.materials_listbox
+        sel = lb.curselection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a material to decrement.")
+            return
+        idx = sel[0]
+        materials = self.character_data['inventory'].setdefault('materials', [])
+        if idx >= len(materials):
+            return
+        item = materials[idx]
+        qty = item.get('quantity', 1)
+        try:
+            qty_int = int(qty)
+        except Exception:
+            qty_int = 1
+        qty_int -= 1
+        if qty_int <= 0:
+            materials.pop(idx)
+            lb.delete(idx)
+        else:
+            item['quantity'] = qty_int
+            cost_each = item.get('gold', '-')
+            cost_str = 'N/A' if cost_each in (None, 'N/A') else f"{cost_each}"
+            display = f"{item.get('name','')} (x{qty_int}) - {cost_str}g each"
+            lb.delete(idx)
+            lb.insert(idx, display)
+            lb.select_set(idx)
 
     def get_data(self):
         """Get inventory data"""
@@ -833,7 +480,8 @@ class InventoryTab:
         self.character_data['inventory'] = data.get('inventory', {
             'magic': [],
             'stored_magic': [],
-            'elsewhere': []
+            'elsewhere': [],
+            'materials': []
         })
         
         # Clear all listboxes

@@ -76,7 +76,8 @@ class CharacterSheetGUI:
                 'stored': [],
                 'magic': [],
                 'stored_magic': [],
-                'elsewhere': []
+                'elsewhere': [],
+                'materials': []
             },
             'specialAbilities': {
                 'rank1': '',
@@ -136,8 +137,12 @@ class CharacterSheetGUI:
         # Set up callback for gear die tab to notify basic info tab of max HP changes
         self.gear_die_tab.max_hp_callback = self.basic_info_tab.update_max_hp_display
         
-        # Set up callback for aspects tab to notify gear die tab of aspect changes
-        self.aspects_tab.gear_die_callback = self.gear_die_tab.on_aspects_change
+        # Set up callback for aspects tab to notify gear die tab of aspect changes (guarded)
+        if hasattr(self.aspects_tab, 'gear_die_callback') or True:
+            try:
+                setattr(self.aspects_tab, 'gear_die_callback', self.gear_die_tab.on_aspects_change)
+            except Exception:
+                pass
         
         # Set up callback to update abilities dropdown when D12 aspect changes
         self.aspects_tab.set_abilities_callback(self.abilities_tab.update_ability_dropdown)
@@ -305,7 +310,13 @@ class CharacterSheetGUI:
         print("[DEBUG] Reverting specialization effects - resetting all aspects to default d4")
         
         # Set a flag to prevent conflict resolution during reset
-        self.aspects_tab.resetting_aspects = True
+        # Ensure the aspects tab has the resetting flag before toggling
+        try:
+            if not hasattr(self.aspects_tab, 'resetting_aspects'):
+                setattr(self.aspects_tab, 'resetting_aspects', False)
+            setattr(self.aspects_tab, 'resetting_aspects', True)
+        except Exception:
+            pass
         
         # Reset all aspects to their default values (d4) when changing specialization
         for aspect in ['melee', 'ranged', 'rogue', 'magic']:
@@ -321,7 +332,10 @@ class CharacterSheetGUI:
             print(f"[DEBUG] {aspect} reset to d4 and unlocked")
         
         # Clear the reset flag
-        self.aspects_tab.resetting_aspects = False
+        try:
+            setattr(self.aspects_tab, 'resetting_aspects', False)
+        except Exception:
+            pass
         
         print("[DEBUG] All aspects reset to default values")
 
@@ -507,7 +521,7 @@ class CharacterSheetGUI:
         """Save character data to JSON file"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
-            filetypes=[["JSON files", "*.json"], ["All files", "*.*"]]
+            filetypes=(("JSON files", "*.json"), ("All files", "*.*"))
         )
         if file_path:
             try:
@@ -549,7 +563,7 @@ class CharacterSheetGUI:
     def load_character(self):
         """Load character data from JSON file"""
         file_path = filedialog.askopenfilename(
-            filetypes=[["JSON files", "*.json"], ["All files", "*.*"]]
+            filetypes=(("JSON files", "*.json"), ("All files", "*.*"))
         )
         if file_path:
             try:
@@ -589,10 +603,11 @@ class CharacterSheetGUI:
                 else:
                     # Update specialization lock state based on loaded rank (for older saves)
                     loaded_rank = load_data.get('rank', 1)
-                    if loaded_rank >= 2:
-                        self.basic_info_tab.lock_specialization()
-                    else:
-                        self.basic_info_tab.unlock_specialization()
+                    # Lock/unlock specialization if supported by BasicInfoTab
+                    if loaded_rank >= 2 and hasattr(self.basic_info_tab, 'lock_fields'):
+                        self.basic_info_tab.lock_fields()
+                    elif hasattr(self.basic_info_tab, 'unlock_fields'):
+                        self.basic_info_tab.unlock_fields()
                     messagebox.showinfo("Success", "Character loaded successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load character: {str(e)}")
@@ -698,10 +713,10 @@ class CharacterSheetGUI:
                 },
                 'magicItems': [],
                 'inventory': {
-                    'stored': [],
                     'magic': [],
                     'stored_magic': [],
-                    'elsewhere': []
+                    'elsewhere': [],
+                    'materials': []
                 },
                 'specialAbilities': {
                     'rank1': '',
@@ -741,7 +756,7 @@ class CharacterSheetGUI:
         """Print character sheet to PDF"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
-            filetypes=[["PDF files", "*.pdf"], ["All files", "*.*"]]
+            filetypes=(("PDF files", "*.pdf"), ("All files", "*.*"))
         )
         if file_path:
             try:
