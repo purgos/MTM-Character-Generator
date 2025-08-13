@@ -224,6 +224,11 @@ class CharacterSheetGUI:
         """Handle unarmed combat checkbox changes"""
         unarmed_combat = self.basic_info_tab.unarmed_combat_var.get()
         self.character_data['unarmedCombat'] = unarmed_combat
+        # Sync auto-granted abilities for Unarmed Combat (do not count toward limits)
+        try:
+            self.abilities_tab.sync_unarmed_auto_abilities(unarmed_combat)
+        except Exception as e:
+            print(f"[WARN] Unable to sync unarmed auto abilities: {e}")
         
         # Check if Specialized Warrior Melee is selected and handle the combination
         current_type = self.character_data.get('type', 'Non-Specialized')
@@ -254,9 +259,11 @@ class CharacterSheetGUI:
         # For non-Specialized Warrior Melee characters, use the standard unarmed combat effects
         if current_type != 'Specialized Warrior Melee':
             self.aspects_tab.update_unarmed_combat_effects(unarmed_combat)
-        
+
         # Update gear die allocation options based on unarmed combat status
         self.gear_die_tab.on_unarmed_combat_change(unarmed_combat)
+        # Refresh abilities UI availability text
+        self.abilities_tab.update_ability_availability()
 
     def on_type_update(self, *args):
         """Handle type/specialization changes"""

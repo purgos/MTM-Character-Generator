@@ -1,6 +1,58 @@
 # MTM V7.0 Aspect Abilities - Python Dictionary Format
 
 ASPECT_ABILITIES = {
+    'universal': {
+        'Brew Potion': (
+            "Brew Potion: Any spell listed in the Players Guide can be brewed into a potion. "
+            "A character can take this ability only at character creation (or gain it as a Magic special ability or be of the Galdur Race). "
+            "This ability must be assigned to a gear die slot. (Unless granted as a Magic Special Ability). "
+            "This gear die slot is forever dedicated to this ability and cannot be used for any other purpose. "
+            "All potions brewed use the gear die assigned to determine its effect(s) where applicable. "
+            "Note: Any Potion that causes a variable Healing effect always heals the maximum amount plus two per imbiber rank, "
+            "all other potions, roll as usual. Brewing a potion requires 1 day per potion and costs 100gp per potion per gear die "
+            "and requires a portable lab (see equipment) or a normal lab. Potions are completely consumed with each use and potions "
+            "can never Crit/Explode when determining spell effect(s)."
+        ),
+        'Craft Wand': (
+            "Craft Wand: Any spell listed in the spell list can be cast into a Wand. "
+            "A character can take this ability only at character creation (or gain it as a Magic special ability or be of the Galdur Race). "
+            "This ability must be assigned to a gear die slot (Unless granted as a Magic Special Ability). "
+            "This gear die slot is forever dedicated to this ability and cannot be used for any other purpose. "
+            "All wands created use the gear die assigned to determine its effect(s) where applicable. "
+            "Note: Any Wand that causes a variable Healing effect always heals the maximum amount plus two per caster rank, "
+            "all other Wands, roll as usual. Crafting a wand takes 48 hours and may consist of a single spell only and costs 100gp "
+            "per Wand per gear die for the special materials used to create them (see equipment). Wands become forever useless after "
+            "expending all their charges. Spells cast from Wands are always successfully cast by saying the command word of the Wand aloud "
+            "upon activating it; however, spells cast from Wands may not Crit/Explode. This word is etched on the surface of the Wand upon "
+            "creation and can always be read with a successful Analyze spell. Staves and Rods also have the same command words on their surface "
+            "upon creation and can also be detected via a successful Analyze spell."
+        ),
+        'Scribe Scroll': (
+            "Scribe Scroll: Any spell listed in the spell list can be scribed onto a scroll. "
+            "A character can take this ability only at character creation (or gain it as a Magic special ability or be of the Galdur Race). "
+            "This ability must be assigned to a gear die slot (Unless granted as a Magic Special Ability). "
+            "This gear die slot is forever dedicated to this ability and cannot be used for any other purpose. "
+            "All scrolls scribed use the gear die assigned to determine its effect(s) where applicable. "
+            "Note: Any Scroll that causes a variable Healing effect always heals the maximum amount plus two per caster rank, "
+            "all other Scrolls, roll as usual. Scribing a scroll takes 8 hours and may consist of a single spell only and costs 100gp per scroll "
+            "per gear die for the special materials used to create them (see equipment). Scrolls become forever useless after casting. "
+            "Spells cast from scrolls are always successfully cast; however, spells cast from Scrolls may not Crit/Explode."
+        ),
+    },
+    'unarmed': {
+        'Flurry of Blows': (
+            "Flurry of Blows: As a full round action, an unarmed combat specialist can unleash a furious attack once per encounter. "
+            "To utilize this attack, the character would roll a Warrior Aspect check to hit a number of times equal to his/her rank +3 (minimum four attacks). "
+            "Each attack must hit successfully, or the Flurry will end immediately. For example: a 6th rank PC declares use of Flurry and will continue to make a number of attack rolls equal to rank +3 as long as each attack hits. "
+            "Once any attack misses, the attack action ends immediately. Roll your Gear die in damage for each attack that was successful during the Flurry. "
+            "A rank 4 UC Specialist can use this ability as a standard action, and a rank eight or better UC Specialist can use this as a free action."
+        ),
+        'Stunning Strike': (
+            "Stunning Strike: As a full round action once per encounter, the unarmed combat specialist can attempt a Stunning Strike. "
+            "If the aspect check to hit is successful, the target takes on the Stunned condition until the end of their next turn. "
+            "A rank 4 UC Specialist can use this ability as a standard action, and a rank eight or better UC Specialist can use this ability every other round."
+        ),
+    },
     'melee': {
         'Cleave': 'When you kill an opponent or reduce them to 0 HP, you can make a single free attack at your best Gear die against all adjacent foes. You may not move at all. If you do, your turn ends immediately. If you kill another foe, you may cleave again and continue doing so as long as you kill at least one foe each round and that you do not move.',
         'Disarm': 'As a Move Action, the attacker can attempt to disarm an opponent. The attacker and the opponent both roll an opposed WM check, if the attackers roll is higher, the opponent is disarmed of one weapon. Modifiers for size, attached weapons, and two-handed weapons etc. apply (+2/-2 to check for each applicable disadvantage) with +2/-2 per size category difference.',

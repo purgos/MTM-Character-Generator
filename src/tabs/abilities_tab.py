@@ -7,7 +7,7 @@ class AbilitiesTab:
         self.parent = parent
         self.character_data = character_data
         self.tab = ttk.Frame(parent)
-        
+
         # Define when characters gain special abilities based on specialization
         self.ABILITY_RANKS = {
             'Non-Specialized': [1, 4, 8],
@@ -20,7 +20,7 @@ class AbilitiesTab:
             'Specialized Rogue': [1, 2, 3, 6, 8, 10],
             'Shield Master': [1, 2, 3, 6, 8, 10]
         }
-        
+
         # Initialize abilities data with all possible ranks
         if 'specialAbilities' not in self.character_data:
             self.character_data['specialAbilities'] = {
@@ -32,8 +32,10 @@ class AbilitiesTab:
                 'rank8': '',
                 'rank10': ''
             }
-        
+
         self.create_tab()
+        # Ensure auto abilities reflect current unarmed combat status
+        self.sync_unarmed_auto_abilities(self.character_data.get('unarmedCombat', False))
         
     def create_tab(self):
         """Create the abilities tab"""
@@ -176,32 +178,33 @@ class AbilitiesTab:
         self.update_ability_visibility()
     
     def update_ability_dropdown(self):
-        """Update the ability dropdown based on the level 1 D12 aspect"""
+        """Update the ability dropdown to include D12 aspect abilities plus universal abilities."""
         level_one_d12_aspect = self.character_data.get('levelOneD12Aspect')
-        
+
+        # Aspect-specific abilities (if any)
+        aspect_abilities = []
         if level_one_d12_aspect and level_one_d12_aspect in ASPECT_ABILITIES:
-            # Get all abilities for the specific aspect
-            all_abilities = list(ASPECT_ABILITIES[level_one_d12_aspect].keys())
-            
-            # Get currently selected abilities
-            selected_abilities = self.character_data.get('selectedAbilities', [])
-            
-            # Filter out already selected abilities
-            available_abilities = [ability for ability in all_abilities if ability not in selected_abilities]
-            
-            self.ability_dropdown['values'] = available_abilities
-            
-            if available_abilities:
-                self.ability_dropdown.set(available_abilities[0])
-                self.on_ability_selected()
-            else:
-                self.ability_dropdown.set('')
-                self.ability_description_label.config(text="No more abilities available")
+            aspect_abilities = list(ASPECT_ABILITIES[level_one_d12_aspect].keys())
+
+        # Universal abilities are always available to all characters
+        universal_abilities = list(ASPECT_ABILITIES.get('universal', {}).keys())
+
+        # Build combined list; put universal first (alphabetical), then aspect-defined order
+        combined = sorted(universal_abilities) + aspect_abilities
+
+        # Exclude already selected
+        selected_abilities = self.character_data.get('selectedAbilities', [])
+        available_abilities = [a for a in combined if a not in selected_abilities]
+
+        self.ability_dropdown['values'] = available_abilities
+
+        if available_abilities:
+            self.ability_dropdown.set(available_abilities[0])
+            self.on_ability_selected()
         else:
-            # No D12 aspect set, show empty dropdown
-            self.ability_dropdown['values'] = []
             self.ability_dropdown.set('')
-            self.ability_description_label.config(text="Select a D12 aspect first")
+            helper = "No more abilities available" if combined else "Select a D12 aspect first"
+            self.ability_description_label.config(text=helper)
         
         # Update availability display and button state
         self.update_ability_availability()
@@ -210,12 +213,16 @@ class AbilitiesTab:
         """Show description when an ability is selected"""
         selected_ability = self.ability_var.get()
         level_one_d12_aspect = self.character_data.get('levelOneD12Aspect')
-        
-        if selected_ability and level_one_d12_aspect and level_one_d12_aspect in ASPECT_ABILITIES:
-            description = ASPECT_ABILITIES[level_one_d12_aspect].get(selected_ability, '')
-            self.ability_description_label.config(text=description)
-        else:
-            self.ability_description_label.config(text="")
+
+        description = ''
+        if selected_ability:
+            # Prefer universal, then aspect-specific, then unarmed
+            description = ASPECT_ABILITIES.get('universal', {}).get(selected_ability, '')
+            if not description and level_one_d12_aspect and level_one_d12_aspect in ASPECT_ABILITIES:
+                description = ASPECT_ABILITIES[level_one_d12_aspect].get(selected_ability, '')
+            if not description:
+                description = ASPECT_ABILITIES.get('unarmed', {}).get(selected_ability, '')
+        self.ability_description_label.config(text=description)
     
     def add_ability(self):
         """Add the selected ability to the list"""
@@ -255,18 +262,26 @@ class AbilitiesTab:
             index = selection[0]
             if 'selectedAbilities' in self.character_data and index < len(self.character_data['selectedAbilities']):
                 removed_ability = self.character_data['selectedAbilities'].pop(index)
+
+                # Prevent removal of auto-granted Unarmed abilities while enabled
+                if removed_ability in self._get_unarmed_auto_abilities() and self.character_data.get('unarmedCombat', False):
+                    # Re-insert it and return without changing UI
+                    self.character_data['selectedAbilities'].insert(index, removed_ability)
+                    return
                 
                 # Add the ability back to the dropdown options
                 current_values = list(self.ability_dropdown['values'])
                 if removed_ability not in current_values:
                     current_values.append(removed_ability)
-                    # Sort the abilities to maintain order
+                    # Sort the abilities to maintain order (universal alpha, then aspect order)
                     level_one_d12_aspect = self.character_data.get('levelOneD12Aspect')
+                    aspect_abilities = []
                     if level_one_d12_aspect and level_one_d12_aspect in ASPECT_ABILITIES:
                         aspect_abilities = list(ASPECT_ABILITIES[level_one_d12_aspect].keys())
-                        # Sort current_values based on the original order
-                        sorted_values = [ability for ability in aspect_abilities if ability in current_values]
-                        self.ability_dropdown['values'] = sorted_values
+                    universal_abilities = list(ASPECT_ABILITIES.get('universal', {}).keys())
+                    sorted_values = sorted([a for a in current_values if a in universal_abilities])
+                    sorted_values += [a for a in aspect_abilities if a in current_values and a not in sorted_values]
+                    self.ability_dropdown['values'] = sorted_values
                     
                     # Re-enable the add button if it was disabled
                     self.add_ability_button.config(state='normal')
@@ -303,18 +318,18 @@ class AbilitiesTab:
                 selected_ability = selected_abilities[index]
                 level_one_d12_aspect = self.character_data.get('levelOneD12Aspect')
                 
-                if level_one_d12_aspect and level_one_d12_aspect in ASPECT_ABILITIES:
+                # Prefer universal, then aspect-specific, then unarmed
+                description = ASPECT_ABILITIES.get('universal', {}).get(selected_ability, '')
+                if not description and level_one_d12_aspect and level_one_d12_aspect in ASPECT_ABILITIES:
                     description = ASPECT_ABILITIES[level_one_d12_aspect].get(selected_ability, '')
-                    
-                    # Update the description text widget
-                    self.selected_ability_description.config(state='normal')
-                    self.selected_ability_description.delete(1.0, tk.END)
-                    self.selected_ability_description.insert(1.0, description)
-                    self.selected_ability_description.config(state='disabled')
-                else:
-                    self.selected_ability_description.config(state='normal')
-                    self.selected_ability_description.delete(1.0, tk.END)
-                    self.selected_ability_description.config(state='disabled')
+                if not description:
+                    description = ASPECT_ABILITIES.get('unarmed', {}).get(selected_ability, '')
+
+                # Update the description text widget
+                self.selected_ability_description.config(state='normal')
+                self.selected_ability_description.delete(1.0, tk.END)
+                self.selected_ability_description.insert(1.0, description)
+                self.selected_ability_description.config(state='disabled')
         else:
             # No selection, clear description
             self.selected_ability_description.config(state='normal')
@@ -340,16 +355,19 @@ class AbilitiesTab:
         current_rank = self.character_data.get('rank', 1)
         specialization = self.character_data.get('type', 'Non-Specialized')
         ability_ranks = self.get_ability_ranks_for_specialization(specialization)
-        current_abilities = len(self.character_data.get('selectedAbilities', []))
+        # Exclude auto-granted Unarmed abilities from the count
+        selected = self.character_data.get('selectedAbilities', [])
+        non_bonus_selected = [a for a in selected if a not in self._get_unarmed_auto_abilities()]
+        current_abilities = len(non_bonus_selected)
         available_count = self.get_available_abilities_count()
-        
+
         # Find next ability rank
         next_ability_rank = None
         for rank in ability_ranks:
             if rank > current_rank:
                 next_ability_rank = rank
                 break
-        
+
         # Create availability message
         if current_abilities < available_count:
             message = f"Available abilities: {current_abilities}/{available_count} (Rank {current_rank})"
@@ -361,9 +379,9 @@ class AbilitiesTab:
                 message += f" - Next ability at rank {next_ability_rank}"
         else:
             message = f"Warning: {current_abilities} abilities selected, but only {available_count} should be available at rank {current_rank}"
-        
+
         self.ability_availability_label.config(text=message)
-        
+
         # Update button state based on availability
         if current_abilities >= available_count:
             self.add_ability_button.config(state='disabled')
@@ -428,6 +446,8 @@ class AbilitiesTab:
         
         # Update character data
         self.character_data['selectedAbilities'] = selected_abilities
+        # Ensure auto abilities are synced based on current unarmed status
+        self.sync_unarmed_auto_abilities(self.character_data.get('unarmedCombat', False))
         
         # Update the display
         self.update_ability_dropdown()
@@ -435,3 +455,27 @@ class AbilitiesTab:
         
         # Update visibility
         self.update_ability_visibility() 
+
+    # --- Unarmed auto abilities support ---
+    def _get_unarmed_auto_abilities(self):
+        return ['Flurry of Blows', 'Stunning Strike']
+
+    def sync_unarmed_auto_abilities(self, enabled: bool):
+        """Auto-add or remove Unarmed Combat abilities based on checkbox. These do not count toward ability limits."""
+        auto = self._get_unarmed_auto_abilities()
+        selected = self.character_data.setdefault('selectedAbilities', [])
+        changed = False
+        if enabled:
+            for a in auto:
+                if a not in selected:
+                    selected.append(a)
+                    changed = True
+        else:
+            # Remove auto abilities if present
+            new_selected = [a for a in selected if a not in auto]
+            if len(new_selected) != len(selected):
+                self.character_data['selectedAbilities'] = new_selected
+                changed = True
+        if changed:
+            self.update_ability_list()
+            self.update_ability_availability()
