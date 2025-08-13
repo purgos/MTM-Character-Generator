@@ -2432,21 +2432,21 @@ MAGIC_ITEMS = {
             'name': 'Staff of Cure All',
             'description': 'This item will cure any ill effect the target is suffering from to include HP damage, lost limbs, lost digits, curses, diseases, or any other malady afflicting the target other than death.',
             'type': 'staff',
-            'charges': 5,
+            'charges': 3,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
         'Curing': {
             'name': 'Staff of Curing',
-            'description': 'This item can be used to cure damage to the injured. One charge casts a Healing staff, two charges casts a Greater Healing staff, three charges casts a Mass Healing Staff, and four charges casts a HeallAll staff.',
+            'description': 'This item can be used to cure damage to the injured. One charge casts a Healing staff, two charges casts a Greater Healing staff, and three charges casts a Mass Healing staff.',
             'type': 'staff',
-            'charges': 5,
+            'charges': 3,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
         'the Mimic': {
             'name': 'Staff of the Mimic',
-            'description': 'This item allows the wielder to assume the look of any non-living object. It is usable 5 times per day. The item will recharge itself every day at dawn.',
+            'description': 'This item allows the wielder to assume the look of any non-living object. It is usable 3 times per day. The item will recharge itself every day at dawn.',
             'type': 'staff',
-            'charges': 5,
+            'charges': 3,
             'variants': ['d4', 'd6', 'd8', 'd10', 'd12']
         },
     },
