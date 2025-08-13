@@ -34,7 +34,6 @@ class InventoryTab:
         # Initialize inventory data
         if 'inventory' not in self.character_data:
             self.character_data['inventory'] = {
-                'stored': [],
                 'magic': [],
                 'stored_magic': [],
                 'elsewhere': [],
@@ -42,7 +41,6 @@ class InventoryTab:
             }
         else:
             # Backfill missing keys
-            self.character_data['inventory'].setdefault('stored', [])
             self.character_data['inventory'].setdefault('magic', [])
             self.character_data['inventory'].setdefault('stored_magic', [])
             self.character_data['inventory'].setdefault('elsewhere', [])
@@ -60,47 +58,7 @@ class InventoryTab:
         inventory_notebook = ttk.Notebook(frame)
         inventory_notebook.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # Stored Equipment
-        stored_frame = ttk.Frame(inventory_notebook)
-        inventory_notebook.add(stored_frame, text="Stored Equipment")
-        
-        # Add item frame for stored equipment
-        stored_add_frame = ttk.Frame(stored_frame)
-        stored_add_frame.pack(fill='x', padx=5, pady=5)
-        
-        ttk.Label(stored_add_frame, text="Add Item:").pack(side='left', padx=5)
-        self.stored_item_var = tk.StringVar()
-        stored_entry = ttk.Entry(stored_add_frame, textvariable=self.stored_item_var)
-        stored_entry.pack(side='left', padx=5, expand=True, fill='x')
-        
-        ttk.Label(stored_add_frame, text="Quantity:").pack(side='left', padx=5)
-        self.stored_quantity_var = tk.StringVar(value="1")
-        stored_quantity = ttk.Entry(stored_add_frame, textvariable=self.stored_quantity_var, width=5)
-        stored_quantity.pack(side='left', padx=5)
-        
-        stored_add_button = ttk.Button(stored_add_frame, text="Add", 
-                                     command=lambda: self.add_inventory_item('stored'))
-        stored_add_button.pack(side='left', padx=5)
-        
-        # Listbox for stored items
-        self.stored_listbox = tk.Listbox(stored_frame)
-        self.stored_listbox.pack(fill='both', expand=True, padx=5, pady=5)
-        
-        # Controls frame for stored items
-        stored_controls = ttk.Frame(stored_frame)
-        stored_controls.pack(fill='x', padx=5, pady=5)
-        
-        stored_remove_button = ttk.Button(stored_controls, text="Remove Selected",
-                                        command=lambda: self.remove_inventory_item('stored'))
-        stored_remove_button.pack(side='left', padx=5)
-        
-        stored_decrease_button = ttk.Button(stored_controls, text="Decrease Quantity",
-                                          command=lambda: self.adjust_quantity('stored', -1))
-        stored_decrease_button.pack(side='left', padx=5)
-        
-        stored_increase_button = ttk.Button(stored_controls, text="Increase Quantity",
-                                          command=lambda: self.adjust_quantity('stored', 1))
-        stored_increase_button.pack(side='left', padx=5)
+
 
         # Magic Bag
         magic_frame = ttk.Frame(inventory_notebook)
@@ -326,7 +284,6 @@ class InventoryTab:
         
         # Store listbox references
         self.listboxes = {
-            'stored': self.stored_listbox,
             'magic': self.magic_listbox,
             'stored_magic': self.stored_magic_listbox,
             'elsewhere': self.elsewhere_listbox,
@@ -335,13 +292,11 @@ class InventoryTab:
         
         # Store variable references (exclude stored_magic, handled separately)
         self.item_vars = {
-            'stored': self.stored_item_var,
             'magic': self.magic_item_var,
             'elsewhere': self.elsewhere_item_var
         }
         
         self.quantity_vars = {
-            'stored': self.stored_quantity_var,
             'magic': self.magic_quantity_var,
             'elsewhere': self.elsewhere_quantity_var
         }
@@ -443,14 +398,12 @@ class InventoryTab:
         return text.strip()
 
     def add_inventory_item(self, category):
-        """Add an item to the specified inventory category"""
+        """Add an item to the specified inventory category (magic, elsewhere only)"""
         item_name = self.item_vars[category].get().strip()
         quantity_str = self.quantity_vars[category].get().strip()
-        
         if not item_name:
             messagebox.showwarning("Warning", "Please enter an item name.")
             return
-        
         try:
             quantity = int(quantity_str)
             if quantity <= 0:
@@ -459,7 +412,6 @@ class InventoryTab:
         except ValueError:
             messagebox.showwarning("Warning", "Quantity must be a number.")
             return
-        
         # Create item entry
         if category == 'elsewhere':
             location = self.elsewhere_location_var.get().strip()
@@ -469,11 +421,9 @@ class InventoryTab:
             item_entry = f"{item_name} (x{quantity}) - {location}"
         else:
             item_entry = f"{item_name} (x{quantity})"
-        
         # Add to listbox and data
         listbox = self.listboxes[category]
         listbox.insert(tk.END, item_entry)
-        
         # Store in character data
         if category == 'elsewhere':
             self.character_data['inventory'][category].append({
@@ -486,7 +436,6 @@ class InventoryTab:
                 'name': item_name,
                 'quantity': quantity
             })
-        
         # Clear input fields
         self.item_vars[category].set("")
         self.quantity_vars[category].set("1")
@@ -851,8 +800,7 @@ class InventoryTab:
         """Load existing inventory data into the GUI"""
         # Normalize legacy stored_magic first
         self.normalize_stored_magic()
-        
-        for category in ['stored', 'magic', 'stored_magic', 'elsewhere']:
+        for category in ['magic', 'stored_magic', 'elsewhere']:
             listbox = self.listboxes[category]
             # Clear any existing items first to avoid duplicates on reload
             listbox.delete(0, tk.END)
@@ -883,7 +831,6 @@ class InventoryTab:
     def set_data(self, data):
         """Set inventory data"""
         self.character_data['inventory'] = data.get('inventory', {
-            'stored': [],
             'magic': [],
             'stored_magic': [],
             'elsewhere': []
