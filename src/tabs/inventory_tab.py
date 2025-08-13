@@ -7,9 +7,11 @@ from .inventory_materials import InventoryMaterials
 from .inventory_elsewhere import InventoryElsewhere
 
 class InventoryTab:
-    def __init__(self, parent, character_data):
+    def __init__(self, parent, character_data, update_gold_callback=None):
         self.parent = parent
         self.character_data = character_data
+        # Callback to update visible Gold in Basic Info tab
+        self.update_gold_callback = update_gold_callback
         self.tab = ttk.Frame(parent)
 
         inventory_notebook = ttk.Notebook(self.tab)
@@ -210,6 +212,16 @@ class InventoryTab:
             qty_int = int(self.magic_quantity_var.get())
         except Exception:
             qty_int = 1
+        # Deduct gold if not free and gold is numeric (guard against spending past 0)
+        try:
+            if getattr(self.magic_bag_tab, 'free_var', None) and not self.magic_bag_tab.free_var.get():
+                cost_each = int(gold) if str(gold).isdigit() else None
+                if cost_each is not None:
+                    total_cost = cost_each * qty_int
+                    if not self._ensure_funds_and_spend(total_cost):
+                        return
+        except Exception:
+            pass
         items = self.character_data['inventory']['magic']
         # Find existing by name
         existing_idx = next((i for i, d in enumerate(items) if d.get('name') == item), None)
@@ -252,6 +264,16 @@ class InventoryTab:
         except Exception:
             qty_int = 1
         location = self.elsewhere_location_var.get().strip() or "(No location)"
+        # Deduct gold if not free and gold is numeric (guard against spending past 0)
+        try:
+            if getattr(self.elsewhere_tab, 'free_var', None) and not self.elsewhere_tab.free_var.get():
+                cost_each = int(gold) if str(gold).isdigit() else None
+                if cost_each is not None:
+                    total_cost = cost_each * qty_int
+                    if not self._ensure_funds_and_spend(total_cost):
+                        return
+        except Exception:
+            pass
         items = self.character_data['inventory']['elsewhere']
         # Combine by name and location
         existing_idx = next((i for i, d in enumerate(items)
@@ -478,6 +500,16 @@ class InventoryTab:
             comp_to_spells = getattr(self.materials_tab, 'component_to_spells', {}) or {}
             spell_names = comp_to_spells.get(comp, [])
         spell_suffix = f" [{', '.join(spell_names)}]" if spell_names else ''
+        # Deduct gold if not free and cost_each is numeric (guard against spending past 0)
+        try:
+            if getattr(self.materials_tab, 'free_var', None) and not self.materials_tab.free_var.get():
+                if isinstance(cost_each, int):
+                    total_cost = cost_each * qty_int
+                    if not self._ensure_funds_and_spend(total_cost):
+                        return
+        except Exception:
+            pass
+
         # Persist to character_data with quantity combining
         materials = self.character_data['inventory'].setdefault('materials', [])
         existing_idx = next((i for i, m in enumerate(materials) if m.get('name') == comp), None)
@@ -544,6 +576,35 @@ class InventoryTab:
         return {
             'inventory': self.character_data['inventory']
         }
+
+    def _adjust_gold(self, delta: int):
+        try:
+            current = int(self.character_data.get('resources', {}).get('gold', 0))
+            new_val = current + int(delta)
+            if 'resources' not in self.character_data:
+                self.character_data['resources'] = {}
+            self.character_data['resources']['gold'] = new_val
+            # Update Basic Info tab via callback if provided
+            if callable(self.update_gold_callback):
+                self.update_gold_callback(new_val)
+        except Exception:
+            pass
+
+    def _ensure_funds_and_spend(self, total_cost: int) -> bool:
+        """Return True if funds are sufficient and spend applied, else warn and return False."""
+        try:
+            if total_cost is None or total_cost <= 0:
+                return True
+            current = int(self.character_data.get('resources', {}).get('gold', 0))
+            if total_cost > current:
+                messagebox.showwarning("Insufficient Gold", f"You don't have enough gold for this purchase.\nRequired: {total_cost}g, Available: {current}g")
+                return False
+            self._adjust_gold(-total_cost)
+            return True
+        except Exception:
+            # If anything unexpected happens, do not spend
+            messagebox.showwarning("Insufficient Gold", "Unable to process purchase due to an unexpected error.")
+            return False
 
     def set_data(self, data):
         """Set inventory data"""

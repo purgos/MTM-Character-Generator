@@ -89,9 +89,11 @@ class InventoryMaterials:
         ttk.Label(self.frame, text="Total Gold:").grid(row=4, column=2, padx=5, pady=5, sticky='e')
         ttk.Label(self.frame, textvariable=self.total_cost_var).grid(row=4, column=3, padx=5, pady=5, sticky='w')
 
-        # Row 5: Buttons
+        # Row 5: Free checkbox + Add/Update button
+        self.free_var = tk.BooleanVar(value=False)
         btns = ttk.Frame(self.frame)
         btns.grid(row=5, column=0, columnspan=4, sticky='w', padx=5, pady=(0, 8))
+        ttk.Checkbutton(btns, text='Free', variable=self.free_var).pack(side='left', padx=(0, 10))
         handler = self.add_callback if self.add_callback else self.add_or_update
         ttk.Button(btns, text='Add/Update', command=handler).pack(side='left')
 

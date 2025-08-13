@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+
 class InventoryElsewhere:
     def __init__(self, parent, item_var, quantity_var, location_var, add_callback, listbox):
         self.frame = ttk.Frame(parent)
@@ -23,6 +24,8 @@ class InventoryElsewhere:
         # UI state vars
         self.gold_var = tk.StringVar(value="-")
         self.total_gold_var = tk.StringVar(value="-")
+        # When unchecked, purchases deduct gold (default False = deduct). When checked, free/no deduction.
+        self.free_var = tk.BooleanVar(value=False)
 
         # Row 0: Item and price
         ttk.Label(self.frame, text="Select Item:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
@@ -54,9 +57,12 @@ class InventoryElsewhere:
         ttk.Label(self.frame, text="Location:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
         ttk.Entry(self.frame, textvariable=self.location_var).grid(row=3, column=1, padx=5, pady=5, sticky="ew")
 
-        # Row 4: Add button
+        # Row 4: Free checkbox + Add button
+        btn_row = ttk.Frame(self.frame)
+        btn_row.grid(row=4, column=0, columnspan=4, sticky='w', pady=10)
+        ttk.Checkbutton(btn_row, text="Free", variable=self.free_var).pack(side='left', padx=(0, 10))
         handler = add_callback if add_callback else self.add_item
-        ttk.Button(self.frame, text="Add", command=handler).grid(row=4, column=0, columnspan=4, pady=10)
+        ttk.Button(btn_row, text="Add", command=handler).pack(side='left')
 
     def on_item_selected(self, event=None):
         item = self.item_var.get()
